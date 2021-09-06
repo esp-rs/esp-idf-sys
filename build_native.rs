@@ -63,14 +63,6 @@ fn esp_idf_version() -> git::Ref {
 }
 
 pub fn main() -> Result<()> {
-    if let Err(err) = run() {
-        println!("{:#}", err);
-        assert!(false);
-    }
-    Ok(())
-}
-
-pub fn run() -> Result<()> {
     let out_dir = path_buf![env::var("OUT_DIR")?];
     let target = env::var("TARGET")?;
     let workspace_dir = out_dir.pop_times(6);
