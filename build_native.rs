@@ -151,16 +151,21 @@ pub fn main() -> Result<()> {
     } else {
         python_env_dir.unwrap()
     }.into();
+    
+    // TODO: better way to get the virtualenv python executable
     let python = embuild::which::which_in(
         "python",
+        #[cfg(windows)]
         Some(&python_env_dir.join("Scripts")),
+        #[cfg(not(windows))]
+        Some(&python_env_dir.join("bin")),
         env::current_dir()?,
     )?;
 
     // Install tools.
-    let chip_target_triple = chip.target_triple();
+    let chip_target_triple = chip.gcc_toolchain();
     let mut tools = vec!["ninja", chip_target_triple];
-    tools.extend(chip.ulp_tool().iter());
+    tools.extend(chip.ulp_gcc_toolchain().iter());
     cmd!(python, &idf_tools_py, "--idf-path", &esp_idf_dir, "--non-interactive", "install"; env=("IDF_TOOLS_PATH", &sdk_dir), args=(tools))?;
 
     // Intall extra tools if requested, but don't fail compilation if this errors
@@ -354,22 +359,23 @@ pub enum Chip {
 }
 
 impl Chip {
-    pub fn detect(target_triple: &str) -> Result<Chip> {
-        if target_triple.starts_with("xtensa-esp") {
-            if target_triple.contains("esp32s3") {
+    pub fn detect(rust_target_triple: &str) -> Result<Chip> {
+        if rust_target_triple.starts_with("xtensa-esp") {
+            if rust_target_triple.contains("esp32s3") {
                 return Ok(Chip::ESP32S3);
-            } else if target_triple.contains("esp32s2") {
+            } else if rust_target_triple.contains("esp32s2") {
                 return Ok(Chip::ESP32S2);
             } else {
                 return Ok(Chip::ESP32);
             }
-        } else if target_triple.starts_with("riscv32imac-esp") {
+        } else if rust_target_triple.starts_with("riscv32imc-esp") {
             return Ok(Chip::ESP32C3);
         }
-        bail!("Unsupported target '{}'", target_triple)
+        bail!("Unsupported target '{}'", rust_target_triple)
     }
 
-    pub fn target_triple(self) -> &'static str {
+    /// The name of the gcc toolchain (to compile the `esp-idf`) for `idf_tools.py`.
+    pub fn gcc_toolchain(self) -> &'static str {
         match self {
             Self::ESP32 => "xtensa-esp32-elf",
             Self::ESP32S2 => "xtensa-esp32s2-elf",
@@ -378,7 +384,9 @@ impl Chip {
         }
     }
 
-    pub fn ulp_tool(self) -> Option<&'static str> {
+    /// The name of the gcc toolchain for the ultra low-power co-processor for
+    /// `idf_tools.py`.
+    pub fn ulp_gcc_toolchain(self) -> Option<&'static str> {
         match self {
             Self::ESP32 => Some("esp32ulp-elf"),
             Self::ESP32S2 => Some("esp32s2ulp-elf"),
