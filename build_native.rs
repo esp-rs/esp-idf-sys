@@ -28,13 +28,13 @@ const DEFAULT_ESP_IDF_REPOSITORY: &str = "https://github.com/espressif/esp-idf.g
 const DEFAULT_ESP_IDF_VERSION: &str = "v4.3";
 
 const STABLE_PATCHES: &[&str] = &[
-    "master_missing_xtensa_atomics_fix.diff",
-    "ping_setsockopt_fix.diff",
+    "patches/missing_xtensa_atomics_fix.diff",
+    "patches/pthread_destructor_fix.diff",
+    "patches/ping_setsockopt_fix.diff",
 ];
 const MASTER_PATCHES: &[&str] = &[
-    "pthread_destructor_fix.diff",
-    "ping_setsockopt_fix.diff",
-    "missing_xtensa_atomics_fix.diff",
+    "patches/master_missing_xtensa_atomics_fix.diff",
+    "patches/ping_setsockopt_fix.diff",
 ];
 
 fn esp_idf_version() -> git::Ref {
@@ -92,22 +92,30 @@ pub fn main() -> Result<()> {
         env::var(ESP_IDF_REPOSITORY_VAR).unwrap_or(DEFAULT_ESP_IDF_REPOSITORY.to_owned());
     let mut esp_idf = Repository::new(&esp_idf_dir);
 
-    let esp_idf_modified = esp_idf.clone_ext(
+    esp_idf.clone_ext(
         &esp_idf_repo,
         CloneOptions::new()
             .force_ref(esp_idf_version.clone())
             .depth(1),
     )?;
 
-    // Apply patches, only if `clone_ext` changed the repo
-    if esp_idf_modified {
-        match esp_idf_version {
-            git::Ref::Branch(b) if esp_idf.get_default_branch()?.as_ref() == Some(&b) => {
-                esp_idf.apply(MASTER_PATCHES)?
-            }
-            git::Ref::Tag(t) if t == DEFAULT_ESP_IDF_VERSION => esp_idf.apply(STABLE_PATCHES)?,
-            _ => (),
-        };
+    // Apply patches, only if the patches were not previously applied.
+    let patch_set = match esp_idf_version {
+        git::Ref::Branch(b) if esp_idf.get_default_branch()?.as_ref() == Some(&b) => {
+            &MASTER_PATCHES[..]
+        }
+        git::Ref::Tag(t) if t == DEFAULT_ESP_IDF_VERSION => &STABLE_PATCHES[..],
+        _ => {
+            cargo::print_warning(format_args!(
+                "`esp-idf` version ({:?}) not officially supported by `esp-idf-sys`. \
+                 Supported versions are 'master', '{}'.",
+                &esp_idf_version, DEFAULT_ESP_IDF_VERSION
+            ));
+            &[]
+        }
+    };
+    if !patch_set.is_empty() {
+        esp_idf.apply_once(patch_set.iter().map(|p| manifest_dir.join(p)))?;
     }
 
     // This is a workaround for msys or even git bash.
