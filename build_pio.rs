@@ -80,7 +80,7 @@ pub fn main() -> Result<()> {
         let pio_scons_vars = project::SconsVariables::from_dump(&project_path)?;
 
         build::LinkArgsBuilder::try_from(&pio_scons_vars)?
-            .build()
+            .build()?
             .propagate();
 
         pio_scons_vars
@@ -106,8 +106,8 @@ pub fn main() -> Result<()> {
     let mcu = pio_scons_vars.mcu.as_str();
 
     // Output the exact ESP32 MCU, so that we and crates depending directly on us can branch using e.g. #[cfg(esp32xxx)]
-    println!("cargo:rustc-cfg={}", mcu);
-    println!("cargo:MCU={}", mcu);
+    cargo::set_rustc_cfg(mcu, "");
+    cargo::set_metadata("MCU", mcu);
 
     let header = PathBuf::from("src")
         .join("include")

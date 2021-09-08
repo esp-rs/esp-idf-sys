@@ -21,7 +21,7 @@ default = ["std", "embedded-svc/std", "native"]
 std = []
 
 # Use `platformio` to build the `esp-idf`
-platformio = []
+pio = []
 # Use native `esp-idf` tooling to build it
 native = ["strum"]
 
@@ -32,5 +32,5 @@ paste = "1"
 
 [build-dependencies]
 embuild = "0.23"
-anyhow = {version = "1", features = ["backtrace"]}
+anyhow = { version = "1" }
 strum = { version = "0.21", optional = true, features = ["derive"] }

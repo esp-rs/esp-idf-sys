@@ -1,3 +1,27 @@
+/*!
+Build the esp-idf natively using cmake.
+
+### Configuration
+Envoronment variables are used to configure how the esp-idf is compiled.
+The following environment variables are used by the build script:
+
+- `SDK_DIR`: The path to the directory where all esp-idf tools are installed.
+             Defaults to `.sdk`.
+- `ESP_IDF_VERSION`:
+  The version used for the `esp-idf` can be one of the following:
+  - `commit:<hash>`: Uses the commit `<hash>` of the `esp-idf` repository.
+                     Note that this will clone the whole `esp-idf` not just one commit.
+  - `tag:<tag>`: Uses the tag `<tag>` of the `esp-idf` repository.
+  - `branch:<branch>`: Uses the branch `<branch>` of the `esp-idf` repository.
+  - `v<major>.<minor>` or `<major>.<minor>`: Uses the tag `v<major>.<minor>` of the `esp-idf` repository.
+  - `<branch>`: Uses the branch `<branch>` of the `esp-idf` repository.
+- `ESP_IDF_REPOSITORY`: The URL to the git repository of the `esp-idf`.
+- `ESP_IDF_SDKCONFIG_DEFAULTS`
+- `ESP_IDF_SDKCONFIG`
+- `ESP_IDF_EXTRA_TOOLS`
+- `MCU`
+*/
+
 use std::convert::TryFrom;
 use std::env;
 use std::ffi::OsString;
@@ -122,21 +146,28 @@ pub fn main() -> Result<()> {
     // When using them `idf_tools.py` prints unix paths (ex. `/c/user/` instead of
     // `C:\user\`), so we correct this with an invocation of `cygpath` which converts the
     // path to the windows representation.
-    let to_win_path = if cfg!(windows) && cmd_output!("cygpath", "--version").is_ok() {
+    let cygpath_works = cfg!(windows) && cmd_output!("cygpath", "--version").is_ok();
+    let to_win_path = if cygpath_works {
         |p: String| cmd_output!("cygpath", "-w", p).unwrap().to_string()
     } else {
         |p: String| p
     };
+    let path_var_sep = if cygpath_works || cfg!(not(windows)) {
+        ':'
+    } else {
+        ';'
+    };
 
-    // Create python virtualenv.
+    // Create python virtualenv or use a previously installed one.
     check_python_at_least(3, 0)?;
     let idf_tools_py = path_buf![&esp_idf_dir, "tools", "idf_tools.py"];
 
     let get_python_env_dir = || -> Result<String> {
-        Ok(cmd_output!(PYTHON, &idf_tools_py, "--idf-path", &esp_idf_dir, "--quiet", "export", "--format=key-value"; ignore_exitcode, env=("IDF_TOOLS_PATH", &sdk_dir))
+        Ok(cmd_output!(PYTHON, &idf_tools_py, "--idf-path", &esp_idf_dir, "--quiet", "export", "--format=key-value";
+                       ignore_exitcode, env=("IDF_TOOLS_PATH", &sdk_dir))
                             .lines()
                             .find(|s| s.trim_start().starts_with("IDF_PYTHON_ENV_PATH="))
-                            .ok_or(anyhow!("`idf_tools.py export` result contains no `IDF_PYTHON_ENV_PATH` item."))?
+                            .ok_or(anyhow!("`idf_tools.py export` result contains no `IDF_PYTHON_ENV_PATH` item"))?
                             .trim()
                             .strip_prefix("IDF_PYTHON_ENV_PATH=").unwrap()
                                   .to_string())
@@ -146,12 +177,13 @@ pub fn main() -> Result<()> {
     let python_env_dir: PathBuf = if python_env_dir.is_err()
         || !Path::new(&python_env_dir.as_ref().unwrap()).exists()
     {
-        cmd!(PYTHON, &idf_tools_py, "--idf-path", &esp_idf_dir, "--quiet", "--non-interactive", "install-python-env"; env=("IDF_TOOLS_PATH", &sdk_dir))?;
+        cmd!(PYTHON, &idf_tools_py, "--idf-path", &esp_idf_dir, "--quiet", "--non-interactive", "install-python-env";
+             env=("IDF_TOOLS_PATH", &sdk_dir))?;
         to_win_path(get_python_env_dir()?)
     } else {
         python_env_dir.unwrap()
     }.into();
-    
+
     // TODO: better way to get the virtualenv python executable
     let python = embuild::which::which_in(
         "python",
@@ -163,15 +195,14 @@ pub fn main() -> Result<()> {
     )?;
 
     // Install tools.
-    let chip_target_triple = chip.gcc_toolchain();
-    let mut tools = vec!["ninja", chip_target_triple];
+    let mut tools = vec!["ninja", chip.gcc_toolchain()];
     tools.extend(chip.ulp_gcc_toolchain().iter());
-    cmd!(python, &idf_tools_py, "--idf-path", &esp_idf_dir, "--non-interactive", "install"; env=("IDF_TOOLS_PATH", &sdk_dir), args=(tools))?;
+    cmd!(python, &idf_tools_py, "--idf-path", &esp_idf_dir, "install"; env=("IDF_TOOLS_PATH", &sdk_dir), args=(tools))?;
 
     // Intall extra tools if requested, but don't fail compilation if this errors
     if let Some(extra_tools) = env::var_os(ESP_IDF_EXTRA_TOOLS_VAR) {
         cmd!(
-            python, &idf_tools_py, "--idf-path", &esp_idf_dir, "--non-interactive", "install";
+            python, &idf_tools_py, "--idf-path", &esp_idf_dir, "install";
             args=(extra_tools.to_string_lossy().split(';').filter(|s| !s.is_empty()).map(str::trim)),
             env=("IDF_TOOLS_PATH", &sdk_dir)
         )
@@ -179,12 +210,13 @@ pub fn main() -> Result<()> {
     }
 
     // Get the paths to the tools.
-    let mut bin_paths: Vec<_> = cmd_output!(python, &idf_tools_py, "--idf-path", &esp_idf_dir, "--quiet", "export", "--format=key-value"; ignore_exitcode, env=("IDF_TOOLS_PATH", &sdk_dir))
+    let mut bin_paths: Vec<_> = cmd_output!(python, &idf_tools_py, "--idf-path", &esp_idf_dir, "--quiet", "export", "--format=key-value"; 
+                                            ignore_exitcode, env=("IDF_TOOLS_PATH", &sdk_dir))
                             .lines()
                             .find(|s| s.trim_start().starts_with("PATH="))
-                            .expect("`idf_tools.py export` result contains no `PATH` item.").trim()
+                            .expect("`idf_tools.py export` result contains no `PATH` item").trim()
                             .strip_prefix("PATH=").unwrap()
-                            .split(if cfg!(windows) { &[';', ':'][..] } else { &[':'][..] })
+                            .split(path_var_sep)
                             .map(|s| s.to_owned())
                             .collect();
     bin_paths.pop();
@@ -322,11 +354,11 @@ pub fn main() -> Result<()> {
     cargo::set_rustc_cfg(chip, "");
     cargo::set_metadata("MCU", chip);
 
-    build::LinkArgsBuilder::try_from(&target.link)?
+    build::LinkArgsBuilder::try_from(&target.link.unwrap())?
         .linker(&compiler)
         .working_directory(&cmake_build_dir)
         .force_ldproxy(true)
-        .build()
+        .build()?
         .propagate();
 
     // In case other SYS crates need to have access to the ESP-IDF C headers
