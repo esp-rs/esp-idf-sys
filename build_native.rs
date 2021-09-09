@@ -25,7 +25,7 @@ const ESP_IDF_SDKCONFIG_VAR: &str = "ESP_IDF_SDKCONFIG";
 const ESP_IDF_EXTRA_TOOLS_VAR: &str = "ESP_IDF_EXTRA_TOOLS";
 const MCU_VAR: &str = "MCU";
 
-const DEFAULT_SDK_DIR: &str = ".sdk";
+const DEFAULT_SDK_DIR: &str = ".espressif";
 const DEFAULT_ESP_IDF_REPOSITORY: &str = "https://github.com/espressif/esp-idf.git";
 const DEFAULT_ESP_IDF_VERSION: &str = "v4.3";
 
@@ -87,7 +87,7 @@ pub fn main() -> Result<()> {
     let sdk_dir = path_buf![env::var(SDK_DIR_VAR).unwrap_or(DEFAULT_SDK_DIR.to_owned())]
         .abspath_relative_to(&workspace_dir);
 
-    // Clone esp-idf.
+    // Clone the esp-idf.
     let esp_idf_dir = sdk_dir.join("esp-idf");
     let esp_idf_version = esp_idf_version();
     let esp_idf_repo =
@@ -137,7 +137,7 @@ pub fn main() -> Result<()> {
     };
 
     // Create python virtualenv or use a previously installed one.
-    check_python_at_least(3, 0)?;
+    check_python_at_least(3, 7)?;
     let idf_tools_py = path_buf![&esp_idf_dir, "tools", "idf_tools.py"];
 
     let get_python_env_dir = || -> Result<String> {
@@ -354,7 +354,7 @@ pub fn main() -> Result<()> {
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display, EnumString)]
 #[repr(u32)]
 pub enum Chip {
-    /// Xtensa LX7 base dual core
+    /// Xtensa LX7 based dual core
     #[strum(serialize = "esp32")]
     ESP32 = 0,
     /// Xtensa LX7 based single core
