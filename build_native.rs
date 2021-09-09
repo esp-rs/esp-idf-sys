@@ -1,26 +1,4 @@
-/*!
-Build the esp-idf natively using cmake.
-
-### Configuration
-Envoronment variables are used to configure how the esp-idf is compiled.
-The following environment variables are used by the build script:
-
-- `SDK_DIR`: The path to the directory where all esp-idf tools are installed.
-             Defaults to `.sdk`.
-- `ESP_IDF_VERSION`:
-  The version used for the `esp-idf` can be one of the following:
-  - `commit:<hash>`: Uses the commit `<hash>` of the `esp-idf` repository.
-                     Note that this will clone the whole `esp-idf` not just one commit.
-  - `tag:<tag>`: Uses the tag `<tag>` of the `esp-idf` repository.
-  - `branch:<branch>`: Uses the branch `<branch>` of the `esp-idf` repository.
-  - `v<major>.<minor>` or `<major>.<minor>`: Uses the tag `v<major>.<minor>` of the `esp-idf` repository.
-  - `<branch>`: Uses the branch `<branch>` of the `esp-idf` repository.
-- `ESP_IDF_REPOSITORY`: The URL to the git repository of the `esp-idf`.
-- `ESP_IDF_SDKCONFIG_DEFAULTS`
-- `ESP_IDF_SDKCONFIG`
-- `ESP_IDF_EXTRA_TOOLS`
-- `MCU`
-*/
+//! Install tools and build the `esp-idf` using native tooling.
 
 use std::convert::TryFrom;
 use std::env;
