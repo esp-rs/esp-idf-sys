@@ -224,9 +224,9 @@ pub fn main() -> Result<()> {
     let sdkconfig = env::var_os(ESP_IDF_SDKCONFIG_VAR)
         .filter(|v| !v.is_empty())
         .map(|v| {
-            Path::new(&v)
-                .abspath_relative_to(&workspace_dir)
-                .into_os_string()
+            let path = Path::new(&v).abspath_relative_to(&workspace_dir);
+            cargo::track_file(&path);
+            path.into_os_string()
         })
         .unwrap_or_else(|| OsString::new());
 
@@ -240,6 +240,7 @@ pub fn main() -> Result<()> {
                 .filter(|v| !v.is_empty())
                 .map(|v| Path::new(v).abspath_relative_to(&workspace_dir))
             {
+                cargo::track_file(&s);
                 if !result.is_empty() {
                     result.push(";");
                 }
