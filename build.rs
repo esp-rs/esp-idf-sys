@@ -7,8 +7,8 @@ compile_error!("One of the features `pio` or `native` must be selected.");
 // specifies it, this overrides the `pio` feature for all other dependencies too.
 // See https://doc.rust-lang.org/cargo/reference/features.html#mutually-exclusive-features.
 #[cfg(any(feature = "pio", feature = "native"))]
-#[cfg_attr(feature = "pio", path = "build_pio.rs")]
-#[cfg_attr(all(feature = "native", not(feature = "pio")), path = "build_native.rs")]
+#[cfg_attr(feature = "native", path = "build_native.rs")]
+#[cfg_attr(all(feature = "pio", not(feature = "native")), path = "build_pio.rs")]
 mod build_impl;
 
 fn main() -> anyhow::Result<()> {
