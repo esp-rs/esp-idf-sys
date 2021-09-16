@@ -34,7 +34,8 @@ const DEFAULT_ESP_IDF_REPOSITORY: &str = "https://github.com/espressif/esp-idf.g
 const DEFAULT_ESP_IDF_VERSION: &str = "v4.3";
 
 fn esp_idf_version() -> git::Ref {
-    let version = env::var(ESP_IDF_VERSION_VAR).unwrap_or(DEFAULT_ESP_IDF_VERSION.to_owned());
+    let version =
+        env::var(ESP_IDF_VERSION_VAR).unwrap_or_else(|_| DEFAULT_ESP_IDF_VERSION.to_owned());
     let version = version.trim();
     assert!(
         !version.is_empty(),
@@ -80,14 +81,14 @@ pub(crate) fn main() -> Result<EspIdfBuildOutput<impl Iterator<Item = (String, k
     cargo::track_env_var(ESP_IDF_EXTRA_TOOLS_VAR);
     cargo::track_env_var(MCU_VAR);
 
-    let sdk_dir = path_buf![env::var(SDK_DIR_VAR).unwrap_or(DEFAULT_SDK_DIR.to_owned())]
+    let sdk_dir = path_buf![env::var(SDK_DIR_VAR).unwrap_or_else(|_| DEFAULT_SDK_DIR.to_owned())]
         .abspath_relative_to(&workspace_dir);
 
     // Clone the esp-idf.
     let esp_idf_dir = sdk_dir.join("esp-idf");
     let esp_idf_version = esp_idf_version();
     let esp_idf_repo =
-        env::var(ESP_IDF_REPOSITORY_VAR).unwrap_or(DEFAULT_ESP_IDF_REPOSITORY.to_owned());
+        env::var(ESP_IDF_REPOSITORY_VAR).unwrap_or_else(|_| DEFAULT_ESP_IDF_REPOSITORY.to_owned());
     let mut esp_idf = Repository::new(&esp_idf_dir);
 
     esp_idf.clone_ext(
@@ -99,10 +100,8 @@ pub(crate) fn main() -> Result<EspIdfBuildOutput<impl Iterator<Item = (String, k
 
     // Apply patches, only if the patches were not previously applied.
     let patch_set = match esp_idf_version {
-        git::Ref::Branch(b) if esp_idf.get_default_branch()?.as_ref() == Some(&b) => {
-            &MASTER_PATCHES[..]
-        }
-        git::Ref::Tag(t) if t == DEFAULT_ESP_IDF_VERSION => &STABLE_PATCHES[..],
+        git::Ref::Branch(b) if esp_idf.get_default_branch()?.as_ref() == Some(&b) => MASTER_PATCHES,
+        git::Ref::Tag(t) if t == DEFAULT_ESP_IDF_VERSION => STABLE_PATCHES,
         _ => {
             cargo::print_warning(format_args!(
                 "`esp-idf` version ({:?}) not officially supported by `esp-idf-sys`. \
@@ -122,7 +121,7 @@ pub(crate) fn main() -> Result<EspIdfBuildOutput<impl Iterator<Item = (String, k
     // path to the windows representation.
     let cygpath_works = cfg!(windows) && cmd_output!("cygpath", "--version").is_ok();
     let to_win_path = if cygpath_works {
-        |p: String| cmd_output!("cygpath", "-w", p).unwrap().to_string()
+        |p: String| cmd_output!("cygpath", "-w", p).unwrap()
     } else {
         |p: String| p
     };
@@ -141,7 +140,7 @@ pub(crate) fn main() -> Result<EspIdfBuildOutput<impl Iterator<Item = (String, k
                        ignore_exitcode, env=("IDF_TOOLS_PATH", &sdk_dir))
                             .lines()
                             .find(|s| s.trim_start().starts_with("IDF_PYTHON_ENV_PATH="))
-                            .ok_or(anyhow!("`idf_tools.py export` result contains no `IDF_PYTHON_ENV_PATH` item"))?
+                            .ok_or_else(|| anyhow!("`idf_tools.py export` result contains no `IDF_PYTHON_ENV_PATH` item"))?
                             .trim()
                             .strip_prefix("IDF_PYTHON_ENV_PATH=").unwrap()
                                   .to_string())
@@ -224,7 +223,7 @@ pub(crate) fn main() -> Result<EspIdfBuildOutput<impl Iterator<Item = (String, k
             cargo::track_file(&path);
             path.into_os_string()
         })
-        .unwrap_or_else(|| OsString::new());
+        .unwrap_or_else(OsString::new);
 
     let sdkconfig_defaults = env::var_os(ESP_IDF_SDKCONFIG_DEFAULTS_VAR)
         .filter(|v| !v.is_empty())
