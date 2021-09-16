@@ -71,7 +71,13 @@ pub(crate) fn main() -> Result<EspIdfBuildOutput<impl Iterator<Item = (String, k
         bindgen: bindgen::Factory::from_scons_vars(&pio_scons_vars)?,
         kconfig_args: kconfig::try_from_config_file(sdkconfig.clone())
             .with_context(|| anyhow!("Failed to read '{:?}'", sdkconfig))?
-            .map(|(key, value)| if key.starts_with("CONFIG_") { (key["CONFIG_".len()..].into(), value) } else { (key, value) }),
+            .map(|(key, value)| {
+                if key.starts_with("CONFIG_") {
+                    (key["CONFIG_".len()..].into(), value)
+                } else {
+                    (key, value)
+                }
+            }),
     };
 
     Ok(build_output)

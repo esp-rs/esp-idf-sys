@@ -3,7 +3,12 @@ compile_error!("One of the features `pio` or `native` must be selected.");
 
 use anyhow::*;
 use regex::{self};
-use std::{env, error, fs, iter::once, path::{Path, PathBuf}, str::FromStr};
+use std::{
+    env, error, fs,
+    iter::once,
+    path::{Path, PathBuf},
+    str::FromStr,
+};
 
 use embuild::{bindgen, build, cargo, kconfig, path_buf, utils::OsStrExt};
 
@@ -24,9 +29,7 @@ pub(crate) const STABLE_PATCHES: &[&str] = &[
 ];
 
 #[allow(unused)]
-pub(crate) const MASTER_PATCHES: &[&str] = &[
-    "patches/master_missing_xtensa_atomics_fix.diff",
-];
+pub(crate) const MASTER_PATCHES: &[&str] = &["patches/master_missing_xtensa_atomics_fix.diff"];
 
 pub(crate) struct EspIdfBuildOutput<I>
 where
@@ -69,16 +72,30 @@ impl EspIdfVersion {
         .chain(once(format!("esp_idf_patch_version=\"{}\"", self.patch)))
     }
 
-    fn grab_const<T>(text: impl AsRef<str>, const_name: impl AsRef<str>, const_type: impl AsRef<str>) -> Result<T> where T: FromStr, T::Err: error::Error + Send + Sync + 'static {
+    fn grab_const<T>(
+        text: impl AsRef<str>,
+        const_name: impl AsRef<str>,
+        const_type: impl AsRef<str>,
+    ) -> Result<T>
+    where
+        T: FromStr,
+        T::Err: error::Error + Send + Sync + 'static,
+    {
+        // Future: Consider using bindgen::callbacks::ParseCallbacks for grabbing macro-based constants. Should be more reliable compared to grepping
+
         let const_name = const_name.as_ref();
 
-        let value = regex::Regex::new(&format!(r"\s+const\s+{}\s*:\s*{}\s*=\s*(\S+)\s*;", const_name, const_type.as_ref()))?
-            .captures(text.as_ref())
-            .ok_or_else(|| anyhow!("Failed to capture constant {}", const_name))?
-            .get(1)
-            .ok_or_else(|| anyhow!("Failed to capture the value of constant {}", const_name))?
-            .as_str()
-            .parse::<T>()?;
+        let value = regex::Regex::new(&format!(
+            r"\s+const\s+{}\s*:\s*{}\s*=\s*(\S+)\s*;",
+            const_name,
+            const_type.as_ref()
+        ))?
+        .captures(text.as_ref())
+        .ok_or_else(|| anyhow!("Failed to capture constant {}", const_name))?
+        .get(1)
+        .ok_or_else(|| anyhow!("Failed to capture the value of constant {}", const_name))?
+        .as_str()
+        .parse::<T>()?;
 
         Ok(value)
     }
@@ -100,15 +117,19 @@ fn main() -> anyhow::Result<()> {
         args: build_output
             .kconfig_args
             .filter(|(key, value)| {
-                matches!(value, kconfig::Value::Tristate(kconfig::Tristate::True)) || kconfig_str_allow.is_match(key)
+                matches!(value, kconfig::Value::Tristate(kconfig::Tristate::True))
+                    || kconfig_str_allow.is_match(key)
             })
             .filter_map(|(key, value)| value.to_rustc_cfg("esp_idf", key))
             .collect(),
     };
 
-    let mcu = cfg_args
-        .get("esp_idf_idf_target")
-        .ok_or_else(|| anyhow!("Failed to get IDF_TARGET from kconfig. cfgs:\n{:?}", cfg_args.args))?;
+    let mcu = cfg_args.get("esp_idf_idf_target").ok_or_else(|| {
+        anyhow!(
+            "Failed to get IDF_TARGET from kconfig. cfgs:\n{:?}",
+            cfg_args.args
+        )
+    })?;
 
     let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
 
@@ -134,11 +155,14 @@ fn main() -> anyhow::Result<()> {
             .header(header_file.try_to_str()?)
             .blacklist_function("strtold")
             .blacklist_function("_strtold_r")
-            .clang_args(if mcu == "esp32c3" {
-                vec!["-target", "riscv32"]
-            } else {
-                vec![]
-            }),
+            .clang_args(vec![
+                "-target",
+                if mcu == "esp32c3" {
+                    "riscv32"
+                } else {
+                    "xtensa"
+                },
+            ]),
     )?;
 
     let cfg_args = build::CfgArgs {
