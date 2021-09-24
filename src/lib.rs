@@ -65,5 +65,9 @@ mod bindings {
     pub static mut __PTHREAD_RWLOCK_INTERNAL_REFERENCE: *mut c_types::c_void =
         super::pthread_rwlock::pthread_rwlock_init as *mut _;
 
+    #[cfg(not(doc))]
     include!(env!("EMBUILD_GENERATED_BINDINGS_FILE"));
+
+    #[cfg(doc)]
+    include!("bindings-for-docs.rs");
 }

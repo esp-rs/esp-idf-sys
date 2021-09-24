@@ -17,7 +17,7 @@ use embuild::{bindgen, build, cargo, kconfig, path_buf, utils::OsStrExt};
 // feature so instead we prefer the `native` feature over `pio` so that if one package
 // specifies it, this overrides the `pio` feature for all other dependencies too.
 // See https://doc.rust-lang.org/cargo/reference/features.html#mutually-exclusive-features.
-#[cfg(any(feature = "pio", feature = "native"))]
+#[cfg(all(any(feature = "pio", feature = "native"), not(doc)))]
 #[cfg_attr(feature = "native", path = "build_native.rs")]
 #[cfg_attr(all(feature = "pio", not(feature = "native")), path = "build_pio.rs")]
 mod build_impl;
@@ -102,6 +102,11 @@ impl EspIdfVersion {
 }
 
 fn main() -> anyhow::Result<()> {
+    match std::env::var("DOCS_RS") {
+        Ok(x) if x == "1" => return Ok(()),
+        _ => {}
+    }
+
     let build_output = build_impl::main()?;
 
     // We need to restrict the kconfig parameters which are turned into rustc cfg items
@@ -167,6 +172,8 @@ fn main() -> anyhow::Result<()> {
                 },
             ]),
     )?;
+
+    std::fs::copy(&bindings_file, "src/bindings-for-docs.rs")?;
 
     let cfg_args = build::CfgArgs {
         args: cfg_args
