@@ -17,7 +17,7 @@ use embuild::{bindgen, build, cargo, kconfig, path_buf, utils::OsStrExt};
 // feature so instead we prefer the `native` feature over `pio` so that if one package
 // specifies it, this overrides the `pio` feature for all other dependencies too.
 // See https://doc.rust-lang.org/cargo/reference/features.html#mutually-exclusive-features.
-#[cfg(all(any(feature = "pio", feature = "native"), not(doc)))]
+#[cfg(any(feature = "pio", feature = "native"))]
 #[cfg_attr(feature = "native", path = "build_native.rs")]
 #[cfg_attr(all(feature = "pio", not(feature = "native")), path = "build_pio.rs")]
 mod build_impl;
