@@ -11,9 +11,9 @@ use embuild::pio;
 use embuild::pio::project;
 use embuild::{bindgen, path_buf};
 
-use super::EspIdfBuildOutput;
+use super::common::*;
 
-pub(crate) fn main() -> Result<EspIdfBuildOutput<impl Iterator<Item = (String, kconfig::Value)>>> {
+pub fn build() -> Result<EspIdfBuildOutput> {
     let (pio_scons_vars, link_args) =
         if let Some(pio_scons_vars) = project::SconsVariables::from_piofirst() {
             println!("cargo:info=PIO->Cargo build detected: generating bindings only");
@@ -41,8 +41,9 @@ pub(crate) fn main() -> Result<EspIdfBuildOutput<impl Iterator<Item = (String, k
                 .files(build::tracked_globs_iter(path_buf!["."], &["patches/**"])?)
                 .files(build::tracked_env_globs_iter("ESP_IDF_SYS_GLOB")?);
 
-            for patch in super::STABLE_PATCHES {
-                builder.platform_package_patch(PathBuf::from(patch), path_buf!["framework-espidf"]);
+            let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
+            for patch in STABLE_PATCHES {
+                builder.platform_package_patch(manifest_dir.join(patch), path_buf!["framework-espidf"]);
             }
 
             let project_path = builder.generate(&resolution)?;
@@ -68,16 +69,14 @@ pub(crate) fn main() -> Result<EspIdfBuildOutput<impl Iterator<Item = (String, k
     let build_output = EspIdfBuildOutput {
         cincl_args: build::CInclArgs::try_from(&pio_scons_vars)?,
         link_args,
-        bindgen: bindgen::Factory::from_scons_vars(&pio_scons_vars)?,
-        kconfig_args: kconfig::try_from_config_file(sdkconfig.clone())
+        bindgen: bindgen::Factory::from_scons_vars(&pio_scons_vars)?
+            .with_clang_args(EspIdfComponents::new().clang_args().collect::<Vec<_>>()),
+        components: EspIdfComponents::new(),
+        kconfig_args: Box::new(kconfig::try_from_config_file(sdkconfig.clone())
             .with_context(|| anyhow!("Failed to read '{:?}'", sdkconfig))?
             .map(|(key, value)| {
-                if key.starts_with("CONFIG_") {
-                    (key["CONFIG_".len()..].into(), value)
-                } else {
-                    (key, value)
-                }
-            }),
+                (key.strip_prefix("CONFIG_").map(str::to_string).unwrap_or(key), value)
+            })),
     };
 
     Ok(build_output)
