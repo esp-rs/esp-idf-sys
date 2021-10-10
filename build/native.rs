@@ -8,8 +8,8 @@ use std::str::FromStr;
 
 use anyhow::*;
 use embuild::cargo::IntoWarning;
-use embuild::cmake::codemodel::Language;
-use embuild::cmake::ObjKind;
+use embuild::cmake::file_api::codemodel::Language;
+use embuild::cmake::file_api::ObjKind;
 use embuild::fs::copy_file_if_different;
 use embuild::git::{CloneOptions, Repository};
 use embuild::python::{check_python_at_least, PYTHON};
@@ -172,7 +172,7 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
 
     let get_python_env_dir = || -> Result<String> {
         Ok(cmd_output!(PYTHON, &idf_tools_py, "--idf-path", &esp_idf_dir, "--quiet", "export", "--format=key-value";
-                       ignore_exitcode, env=("IDF_TOOLS_PATH", &sdk_dir))
+                       ignore_exitcode, env=("IDF_TOOLS_PATH", &sdk_dir))?
                             .lines()
                             .find(|s| s.trim_start().starts_with("IDF_PYTHON_ENV_PATH="))
                             .ok_or_else(|| anyhow!("`idf_tools.py export` result contains no `IDF_PYTHON_ENV_PATH` item"))?
@@ -219,7 +219,7 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
 
     // Get the paths to the tools.
     let mut bin_paths: Vec<_> = cmd_output!(python, &idf_tools_py, "--idf-path", &esp_idf_dir, "--quiet", "export", "--format=key-value";
-                                            ignore_exitcode, env=("IDF_TOOLS_PATH", &sdk_dir))
+                                            ignore_exitcode, env=("IDF_TOOLS_PATH", &sdk_dir))?
                             .lines()
                             .find(|s| s.trim_start().starts_with("PATH="))
                             .expect("`idf_tools.py export` result contains no `PATH` item").trim()
