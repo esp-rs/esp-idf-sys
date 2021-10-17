@@ -18,7 +18,7 @@ use strum::{Display, EnumString};
 use super::common::{EspIdfBuildOutput, EspIdfComponents, MASTER_PATCHES, STABLE_PATCHES};
 
 const ESP_IDF_INSTALL_DIR_VAR: &str = "ESP_IDF_INSTALL_DIR";
-const ESP_IDF_INSTALL_LOCAL_VAR: &str = "ESP_IDF_INSTALL_LOCAL";
+const ESP_IDF_GLOBAL_INSTALL_VAR: &str = "ESP_IDF_GLOBAL_INSTALL";
 const ESP_IDF_VERSION_VAR: &str = "ESP_IDF_VERSION";
 const ESP_IDF_REPOSITORY_VAR: &str = "ESP_IDF_REPOSITORY";
 const ESP_IDF_SDKCONFIG_DEFAULTS_VAR: &str = "ESP_IDF_SDKCONFIG_DEFAULTS";
@@ -106,7 +106,7 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
     };
 
     cargo::track_env_var(ESP_IDF_INSTALL_DIR_VAR);
-    cargo::track_env_var(ESP_IDF_INSTALL_LOCAL_VAR);
+    cargo::track_env_var(ESP_IDF_GLOBAL_INSTALL_VAR);
     cargo::track_env_var(ESP_IDF_VERSION_VAR);
     cargo::track_env_var(ESP_IDF_REPOSITORY_VAR);
     cargo::track_env_var(ESP_IDF_SDKCONFIG_DEFAULTS_VAR);
@@ -309,21 +309,21 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
 fn esp_idf_version() -> Result<git::Ref> {
     let version = match env::var(ESP_IDF_VERSION_VAR) {
         Err(env::VarError::NotPresent) => DEFAULT_ESP_IDF_VERSION.to_owned(),
-        v => v?
+        v => v?,
     };
     Ok(espidf::decode_esp_idf_version_ref(&version))
 }
 
 fn esp_idf_install_opts() -> Result<InstallOpts> {
-    let install_local = match env::var(ESP_IDF_INSTALL_LOCAL_VAR) {
+    let install_global = match env::var(ESP_IDF_GLOBAL_INSTALL_VAR) {
         Err(env::VarError::NotPresent) => None,
         e => Some(e?),
     };
 
-    let install_local = install_local.map(|s| s.trim().to_lowercase());
-    Ok(match install_local.as_deref() {
-        Some("1" | "true" | "y" | "yes") => InstallOpts::NO_GLOBAL_INSTALL,
-        Some(_) | None => InstallOpts::empty(),
+    let install_global = install_global.map(|s| s.trim().to_lowercase());
+    Ok(match dbg!(install_global.as_deref()) {
+        Some("1" | "true" | "y" | "yes") => InstallOpts::empty(),
+        Some(_) | None => InstallOpts::NO_GLOBAL_INSTALL,
     })
 }
 

@@ -82,11 +82,11 @@ The following environment variables are used by the build script:
     The path to the directory where all esp-idf tools are installed. If it is set to a
     relative path, it is relative to the crate workspace-dir.
     
-    If not set, when `ESP_IDF_INSTALL_GLOBAL` is set to `1` it defaults to the global
+    If not set, when `ESP_IDF_GLOBAL_INSTALL` is set to `1` it defaults to the global
     install dir `~/.espressif`, otherwise it defaults to the local install dir `<crate
     workspace-dir>/.embuild/espressif`.
     
-- `ESP_IDF_INSTALL_GLOBAL`
+- `ESP_IDF_GLOBAL_INSTALL`
 
     If set to `1`, `true`, `y` or `yes` uses the global install directory only when `ESP_IDF_INSTALL_DIR` is not specified.
 
