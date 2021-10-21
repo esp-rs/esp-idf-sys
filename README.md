@@ -101,7 +101,7 @@ The following environment variables are used by the build script:
 
   It defaults to `v4.3`.
 - `ESP_IDF_REPOSITORY`: The URL to the git repository of the `esp-idf`, defaults to <https://github.com/espressif/esp-idf.git>.
-- `ESP_IDF_SDKCONFIG_DEFAULTS`: A `;`-seperated list of paths to `sdkconfig.default` files to be used as base
+- `ESP_IDF_SDKCONFIG_DEFAULTS`: A `;`-separated list of paths to `sdkconfig.default` files to be used as base
                                 values for the `sdkconfig`.
 - `ESP_IDF_SDKCONFIG`: A path (absolute or relative) to the esp-idf `sdkconfig` file.
 - `MCU`: The mcu name (e.g. `esp32` or `esp32c3`). If not set this will be automatically
