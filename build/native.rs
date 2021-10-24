@@ -321,7 +321,7 @@ fn esp_idf_install_opts() -> Result<InstallOpts> {
     };
 
     let install_global = install_global.map(|s| s.trim().to_lowercase());
-    Ok(match dbg!(install_global.as_deref()) {
+    Ok(match install_global.as_deref() {
         Some("1" | "true" | "y" | "yes") => InstallOpts::empty(),
         Some(_) | None => InstallOpts::NO_GLOBAL_INSTALL,
     })
