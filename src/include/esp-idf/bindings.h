@@ -38,6 +38,11 @@
 #endif
 
 #include "lwip/lwip_napt.h"
+#include "lwip/err.h"
+#include "lwip/sockets.h"
+#include "lwip/sys.h"
+#include "lwip/netdb.h"
+#include "lwip/inet.h"
 
 #include "ping/ping_sock.h"
 
