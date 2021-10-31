@@ -65,7 +65,7 @@ To enable Bluetooth, or do other configurations to the ESP-IDF sdkconfig you mig
 ### More info
 
 If you are interested how it all works under the hood, check the [build.rs](build/build.rs)
-or build script of this crate.
+build script of this crate.
 
 ### Requirements
 - If using chips other than `esp32c3`:
