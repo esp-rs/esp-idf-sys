@@ -9,6 +9,7 @@ pub use error::*;
 pub use mutex::EspMutex;
 
 pub mod error;
+pub mod interrupts;
 pub mod mutex;
 
 mod alloc;
