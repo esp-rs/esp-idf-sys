@@ -9,15 +9,14 @@ use std::{env, fs};
 use anyhow::*;
 use embuild::cmake::file_api::codemodel::Language;
 use embuild::cmake::file_api::ObjKind;
-use embuild::espidf::InstallOpts;
 use embuild::fs::copy_file_if_different;
 use embuild::utils::{OsStrExt, PathExt};
 use embuild::{bindgen, build, cargo, cmake, espidf, git, kconfig, path_buf};
 use strum::{Display, EnumString};
 
 use super::common::{
-    self, get_install_dir, get_sdkconfig_profile, workspace_dir, EspIdfBuildOutput,
-    EspIdfComponents, ESP_IDF_GLOB_VAR_PREFIX, ESP_IDF_SDKCONFIG_DEFAULTS_VAR,
+    self, get_sdkconfig_profile, workspace_dir, EspIdfBuildOutput, EspIdfComponents,
+    InstallLocation, ESP_IDF_GLOB_VAR_PREFIX, ESP_IDF_SDKCONFIG_DEFAULTS_VAR,
     ESP_IDF_SDKCONFIG_VAR, ESP_IDF_TOOLS_INSTALL_DIR_VAR, MASTER_PATCHES, MCU_VAR, STABLE_PATCHES,
 };
 
@@ -103,6 +102,7 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
     let chip_name = chip.to_string();
     let profile = common::build_profile();
 
+    cargo::track_env_var(espidf::IDF_PATH_VAR);
     cargo::track_env_var(ESP_IDF_TOOLS_INSTALL_DIR_VAR);
     cargo::track_env_var(ESP_IDF_VERSION_VAR);
     cargo::track_env_var(ESP_IDF_REPOSITORY_VAR);
@@ -110,45 +110,81 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
     cargo::track_env_var(ESP_IDF_SDKCONFIG_VAR);
     cargo::track_env_var(MCU_VAR);
 
-    let cmake_tool = espidf::Tools::cmake()?;
-    let tools = espidf::Tools::new(
-        vec!["ninja", chip.gcc_toolchain()]
-            .into_iter()
-            .chain(chip.ulp_gcc_toolchain()),
-    );
+    let idf_frompath = espidf::EspIdf::detect_from_path()?;
 
-    let install_dir = get_install_dir("espressif")?;
-    let idf = espidf::Installer::new(esp_idf_version()?)
-        .opts(InstallOpts::empty())
-        .local_install_dir(install_dir)
-        .git_url(match env::var(ESP_IDF_REPOSITORY_VAR) {
-            Err(env::VarError::NotPresent) => None,
-            git_url => Some(git_url?),
-        })
-        .with_tools(tools)
-        .with_tools(cmake_tool)
-        .install()
-        .context("Could not install esp-idf")?;
+    let install_location = InstallLocation::get("espressif")?;
 
-    // Apply patches, only if the patches were not previously applied.
-    let patch_set = match &idf.esp_idf_version {
-        git::Ref::Branch(b) if idf.esp_idf.get_default_branch()?.as_ref() == Some(b) => {
-            MASTER_PATCHES
-        }
-        git::Ref::Tag(t) if t == DEFAULT_ESP_IDF_VERSION => STABLE_PATCHES,
-        _ => {
-            cargo::print_warning(format_args!(
-                "`esp-idf` version ({:?}) not officially supported by `esp-idf-sys`. \
-                 Supported versions are 'master', '{}'.",
-                &idf.esp_idf_version, DEFAULT_ESP_IDF_VERSION
-            ));
-            &[]
-        }
-    };
-    if !patch_set.is_empty() {
-        idf.esp_idf
-            .apply_once(patch_set.iter().map(|p| manifest_dir.join(p)))?;
+    if idf_frompath.is_some()
+        && install_location.is_some()
+        && !matches!(install_location, Some(InstallLocation::FromPath))
+    {
+        bail!(
+            "ESP-IDF tooling detected on path, however user has overriden with `{}` via `{}`",
+            install_location.unwrap(),
+            InstallLocation::get_env_var_name()
+        );
     }
+
+    let idf = if let Some(idf_frompath) = idf_frompath {
+        match install_location {
+            None | Some(InstallLocation::FromPath) => idf_frompath,
+            Some(install_location) => bail!(
+                "Install location is configured to `{}` via `{}`, however there is ESP-IDF tooling detected on path", 
+                install_location,
+                InstallLocation::get_env_var_name()),
+        }
+    } else {
+        let install_location = install_location
+            .map(Result::Ok)
+            .unwrap_or_else(|| InstallLocation::new_workspace("espressif"))?;
+
+        if matches!(install_location, InstallLocation::FromPath) {
+            bail!(
+                "Install location is configured to `{}` via `{}`, however no ESP-IDF tooling was detected on path", 
+                InstallLocation::FromPath,
+                InstallLocation::get_env_var_name());
+        }
+
+        let cmake_tool = espidf::Tools::cmake()?;
+        let tools = espidf::Tools::new(
+            vec!["ninja", chip.gcc_toolchain()]
+                .into_iter()
+                .chain(chip.ulp_gcc_toolchain()),
+        );
+
+        let idf_version = esp_idf_version()?;
+
+        let idf = espidf::Installer::new(idf_version.clone())
+            .install_dir(install_location.path().map(PathBuf::from))
+            .with_tools(tools)
+            .with_tools(cmake_tool)
+            .install()
+            .context("Could not install esp-idf")?;
+
+        // Apply patches, only if the patches were not previously applied and only if the used esp-idf instance is managed.
+        if let espidf::EspIdfVersion::Managed((_, gitref)) = &idf_version {
+            let patch_set = match gitref {
+                git::Ref::Branch(b) if idf.esp_idf.get_default_branch()?.as_ref() == Some(b) => {
+                    MASTER_PATCHES
+                }
+                git::Ref::Tag(t) if t == DEFAULT_ESP_IDF_VERSION => STABLE_PATCHES,
+                _ => {
+                    cargo::print_warning(format_args!(
+                        "`esp-idf` version ({:?}) not officially supported by `esp-idf-sys`. \
+                        Supported versions are 'master', '{}'.",
+                        gitref, DEFAULT_ESP_IDF_VERSION
+                    ));
+                    &[]
+                }
+            };
+            if !patch_set.is_empty() {
+                idf.esp_idf
+                    .apply_once(patch_set.iter().map(|p| manifest_dir.join(p)))?;
+            }
+        }
+
+        idf
+    };
 
     env::set_var("PATH", &idf.exported_path);
 
@@ -319,12 +355,46 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
     Ok(build_output)
 }
 
-fn esp_idf_version() -> Result<git::Ref> {
-    let version = match env::var(ESP_IDF_VERSION_VAR) {
-        Err(env::VarError::NotPresent) => DEFAULT_ESP_IDF_VERSION.to_owned(),
-        v => v?,
+fn esp_idf_version() -> Result<espidf::EspIdfVersion> {
+    let unmanaged = espidf::EspIdfVersion::try_from_env_var()?;
+
+    let managed_repo_url = match env::var(ESP_IDF_REPOSITORY_VAR) {
+        Err(env::VarError::NotPresent) => None,
+        git_url => Some(git_url?),
     };
-    Ok(espidf::decode_esp_idf_version_ref(&version))
+
+    let managed_version = match env::var(ESP_IDF_VERSION_VAR) {
+        Err(env::VarError::NotPresent) => None,
+        v => Some(v?),
+    };
+
+    if let Some(unmanaged) = unmanaged {
+        if managed_repo_url.is_some() {
+            println!(
+                "cargo:warning=User-supplied ESP-IDF detected via {}, setting `{}` will be ignored",
+                espidf::IDF_PATH_VAR,
+                ESP_IDF_REPOSITORY_VAR
+            );
+        }
+
+        if managed_version.is_some() {
+            println!(
+                "cargo:warning=User-supplied ESP-IDF detected via {}, setting `{}` will be ignored",
+                espidf::IDF_PATH_VAR,
+                ESP_IDF_VERSION_VAR
+            );
+        }
+
+        Ok(espidf::EspIdfVersion::Unmanaged(unmanaged))
+    } else {
+        let managed_version = managed_version
+            .as_deref()
+            .unwrap_or(DEFAULT_ESP_IDF_VERSION);
+
+        Ok(espidf::EspIdfVersion::Managed(
+            espidf::EspIdfVersion::from_version_str(managed_repo_url, managed_version),
+        ))
+    }
 }
 
 // Generate `sdkconfig.defaults` content based on the crate manifest (`Cargo.toml`).

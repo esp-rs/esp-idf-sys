@@ -13,6 +13,9 @@ readme = "README.md"
 links = "esp_idf"
 build = "build/build.rs"
 
+[patch.crates-io]
+embuild = { git = "https://github.com/ivmarkov/embuild", branch = "preconfigured_env" }
+
 [features]
 default = ["std", "pio"]
 

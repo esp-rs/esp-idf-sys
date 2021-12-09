@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::fmt::Display;
 use std::iter::once;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -174,32 +175,81 @@ pub fn get_sdkconfig_profile(path: &Path, profile: &str, chip: &str) -> Option<P
         })
 }
 
-pub fn get_install_dir(builder_name: impl AsRef<str>) -> Result<Option<PathBuf>> {
-    let location = match env::var(ESP_IDF_TOOLS_INSTALL_DIR_VAR) {
-        Err(env::VarError::NotPresent) => None,
-        var => Some(var?.to_lowercase()),
-    };
+#[derive(Clone, Debug, PartialEq)]
+pub enum InstallLocation {
+    Global,
+    Workspace(PathBuf),
+    Out(PathBuf),
+    Custom(PathBuf),
+    FromPath,
+}
 
-    let dir = match location.as_deref() {
-        None | Some("workspace") => Some(
-            workspace_dir()?
-                .join(TOOLS_WORKSPACE_INSTALL_DIR)
-                .join(builder_name.as_ref()),
-        ),
-        Some("global") => None,
-        Some("out") => Some(cargo::out_dir().join(builder_name.as_ref())),
-        Some(custom) => {
-            if let Some(suffix) = custom.strip_prefix("custom:") {
-                Some(PathBuf::from(suffix).abspath_relative_to(&workspace_dir()?))
-            } else {
-                bail!("Invalid installation directory format. Should be one of `global`, `workspace`, `out` or `custom:<dir>`");
-            }
+impl InstallLocation {
+    pub fn get_env_var_name() -> &'static str {
+        ESP_IDF_TOOLS_INSTALL_DIR_VAR
+    }
+
+    pub fn get(builder_name: impl AsRef<str>) -> Result<Option<InstallLocation>> {
+        let location = match env::var(Self::get_env_var_name()) {
+            Err(env::VarError::NotPresent) => None,
+            e => Some(e?),
+        };
+
+        Self::parse(location.as_deref(), builder_name)
+    }
+
+    pub fn parse(location: Option<&str>, builder_name: impl AsRef<str>) -> Result<Option<Self>> {
+        if let Some(location) = location {
+            let location = match location.to_lowercase().as_str() {
+                "global" => Self::Global,
+                "workspace" => Self::new_workspace(builder_name)?,
+                "out" => Self::Out(cargo::out_dir().join(builder_name.as_ref())),
+                "frompath" => Self::FromPath,
+                custom => Self::Custom({
+                    if let Some(suffix) = custom.strip_prefix("custom:") {
+                        PathBuf::from(suffix).abspath_relative_to(&workspace_dir()?)
+                    } else {
+                        bail!("Invalid installation directory format. Should be one of `global`, `workspace`, `out` or `custom:<dir>`");
+                    }
+                }),
+            };
+
+            Ok(Some(location))
+        } else {
+            Ok(None)
         }
-    };
+    }
 
-    Ok(dir)
+    pub fn path(&self) -> Option<&Path> {
+        match self {
+            Self::Global | Self::FromPath => None,
+            Self::Workspace(ref path) => Some(path.as_ref()),
+            Self::Out(ref path) => Some(path.as_ref()),
+            Self::Custom(ref path) => Some(path.as_ref()),
+        }
+    }
+
+    pub fn new_workspace(builder_name: impl AsRef<str>) -> Result<Self> {
+        let dir = workspace_dir()?
+            .join(TOOLS_WORKSPACE_INSTALL_DIR)
+            .join(builder_name.as_ref());
+
+        Ok(Self::Workspace(dir))
+    }
+}
+
+impl Display for InstallLocation {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Global => write!(f, "global"),
+            Self::Workspace(ref path) => write!(f, "workspace({})", path.display()),
+            Self::Out(ref path) => write!(f, "out({})", path.display()),
+            Self::Custom(ref path) => write!(f, "custom({})", path.display()),
+            Self::FromPath => write!(f, "frompath"),
+        }
+    }
 }
 
 pub fn workspace_dir() -> Result<PathBuf> {
-    Ok(cargo::workspace_dir().ok_or_else(|| anyhow!("Cannot fetch crate's workspace dir"))?)
+    cargo::workspace_dir().ok_or_else(|| anyhow!("Cannot fetch crate's workspace dir"))
 }

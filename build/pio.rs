@@ -31,14 +31,44 @@ pub fn build() -> Result<EspIdfBuildOutput> {
         let workspace_dir = workspace_dir()?;
         let profile = build_profile();
 
-        let install_dir = get_install_dir("platformio")?;
+        let pio_frompath = pio::Pio::detect_from_path()?;
 
-        if let Some(install_dir) = install_dir.as_ref() {
-            // Workaround an issue in embuild until it is fixed in the next version
-            fs::create_dir_all(install_dir)?;
+        let install_location = InstallLocation::get("platformio")?;
+
+        if pio_frompath.is_some()
+            && install_location.is_some()
+            && !matches!(install_location, Some(InstallLocation::FromPath))
+        {
+            println!(
+                "cargo:info=PlatformIO executable detected on path, however user has overriden with `{}` via `{}`", 
+                install_location.as_ref().unwrap(),
+                InstallLocation::get_env_var_name());
         }
 
-        let pio = pio::Pio::install(install_dir, pio::LogLevel::Standard, false)?;
+        let pio = match install_location {
+            Some(InstallLocation::FromPath) => {
+                pio_frompath.map(Result::Ok).unwrap_or_else(|| bail!(
+                    "Install location is configured to `{}` via `{}`, however no PlatformIO executable was detected on path", 
+                    InstallLocation::FromPath,
+                    InstallLocation::get_env_var_name()))?
+            },
+            install_location => {
+                let install_location = install_location
+                    .map(Result::Ok)
+                    .unwrap_or_else(|| InstallLocation::new_workspace("platformio"))?;
+
+                if let Some(install_dir) = install_location.path() {
+                    // Workaround an issue in embuild until it is fixed in the next version
+                    fs::create_dir_all(install_dir)?;
+                }
+
+                pio::Pio::install(
+                    install_location.path().map(|p| p.to_owned()),
+                    pio::LogLevel::Standard,
+                    false,
+                )?
+            },
+        };
 
         let resolution = pio::Resolver::new(pio.clone())
             .params(pio::ResolutionParams {
