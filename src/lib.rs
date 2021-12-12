@@ -9,7 +9,10 @@ pub use error::*;
 pub use mutex::EspMutex;
 
 pub mod error;
+
+#[cfg(not(any(esp32c3, esp32s2, esp32s3, esp32c3)))]
 pub mod interrupts;
+
 pub mod mutex;
 
 mod alloc;
