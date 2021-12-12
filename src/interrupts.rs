@@ -2,9 +2,9 @@ use crate::*;
 
 // NOTE: ESP-IDF-specific
 const SPINLOCK_FREE_INIT: u32 = 0xB33FFFFF;
-pub type EspCriticalMutex = portMUX_TYPE;
+pub type EspCriticalSection = portMUX_TYPE;
 
-impl EspCriticalMutex {
+impl EspCriticalSection {
     pub fn new() -> Self {
         Self {
             owner: SPINLOCK_FREE_INIT,
@@ -26,10 +26,10 @@ impl EspCriticalMutex {
     }
 }
 
-pub struct ScopedCriticalSection<'a>(&'a mut EspCriticalMutex);
+pub struct ScopedCriticalSection<'a>(&'a mut EspCriticalSection);
 
 impl<'a> ScopedCriticalSection<'a> {
-    fn new(ecm: &'a mut EspCriticalMutex) -> Self {
+    fn new(ecm: &'a mut EspCriticalSection) -> Self {
         Self(ecm)
     }
 }
