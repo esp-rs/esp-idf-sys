@@ -96,9 +96,9 @@ impl EspIdfVersion {
         let bindings_content = fs::read_to_string(bindings_file.as_ref())?;
 
         Ok(Self {
-            major: Self::grab_const(&bindings_content, "ESP_IDF_VERSION_MAJOR", "u32")?,
-            minor: Self::grab_const(&bindings_content, "ESP_IDF_VERSION_MINOR", "u32")?,
-            patch: Self::grab_const(bindings_content, "ESP_IDF_VERSION_PATCH", "u32")?,
+            major: Self::grab_const(&bindings_content, "ESP_IDF_VERSION_MAJOR", "c_types::c_int")?,
+            minor: Self::grab_const(&bindings_content, "ESP_IDF_VERSION_MINOR", "c_types::c_int")?,
+            patch: Self::grab_const(bindings_content, "ESP_IDF_VERSION_PATCH", "c_types::c_int")?,
         })
     }
 

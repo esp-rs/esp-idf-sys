@@ -100,3 +100,14 @@ mod bindings {
 
     include!(env!("EMBUILD_GENERATED_BINDINGS_FILE"));
 }
+
+#[allow(non_upper_case_globals)]
+#[allow(non_camel_case_types)]
+#[doc(hidden)]
+// wrapper required for mbedlts
+pub mod types {
+    pub mod raw_types {
+        pub use crate::c_types::*;
+    }
+    pub use crate::bindings::size_t;
+}
