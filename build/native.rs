@@ -110,7 +110,7 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
     cargo::track_env_var(ESP_IDF_SDKCONFIG_VAR);
     cargo::track_env_var(MCU_VAR);
 
-    let idf_frompath = espidf::EspIdf::detect_from_path()?;
+    let idf_frompath = espidf::EspIdf::try_from_env()?;
 
     let install_location = InstallLocation::get("espressif")?;
 
@@ -152,9 +152,9 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
                 .chain(chip.ulp_gcc_toolchain()),
         );
 
-        let idf_version = esp_idf_version()?;
+        let idf_reference = esp_idf_reference()?;
 
-        let idf = espidf::Installer::new(idf_version.clone())
+        let idf = espidf::Installer::new(idf_reference.clone())
             .install_dir(install_location.path().map(PathBuf::from))
             .with_tools(tools)
             .with_tools(cmake_tool)
@@ -162,9 +162,11 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
             .context("Could not install esp-idf")?;
 
         // Apply patches, only if the patches were not previously applied and only if the used esp-idf instance is managed.
-        if let espidf::EspIdfVersion::Managed((_, gitref)) = &idf_version {
-            let patch_set = match gitref {
-                git::Ref::Branch(b) if idf.esp_idf.get_default_branch()?.as_ref() == Some(b) => {
+        if let espidf::EspIdfReference::Managed(managed) = &idf_reference {
+            let patch_set = match &managed.git_ref {
+                git::Ref::Branch(ref b)
+                    if idf.repository.get_default_branch()?.as_ref() == Some(b) =>
+                {
                     MASTER_PATCHES
                 }
                 git::Ref::Tag(t) if t == DEFAULT_ESP_IDF_VERSION => STABLE_PATCHES,
@@ -172,13 +174,13 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
                     cargo::print_warning(format_args!(
                         "`esp-idf` version ({:?}) not officially supported by `esp-idf-sys`. \
                         Supported versions are 'master', '{}'.",
-                        gitref, DEFAULT_ESP_IDF_VERSION
+                        managed.git_ref, DEFAULT_ESP_IDF_VERSION
                     ));
                     &[]
                 }
             };
             if !patch_set.is_empty() {
-                idf.esp_idf
+                idf.repository
                     .apply_once(patch_set.iter().map(|p| manifest_dir.join(p)))?;
             }
         }
@@ -265,7 +267,7 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
         })?;
 
     let cmake_toolchain_file = path_buf![
-        &idf.esp_idf.worktree(),
+        &idf.repository.worktree(),
         "tools",
         "cmake",
         chip.cmake_toolchain_file()
@@ -305,7 +307,7 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
         .asmflag(asm_flags)
         .cflag(c_flags)
         .cxxflag(cxx_flags)
-        .env("IDF_PATH", &idf.esp_idf.worktree())
+        .env("IDF_PATH", &idf.repository.worktree())
         .env("PATH", &idf.exported_path)
         .env("SDKCONFIG_DEFAULTS", defaults_files)
         .env("IDF_TARGET", &chip_name)
@@ -355,8 +357,11 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
     Ok(build_output)
 }
 
-fn esp_idf_version() -> Result<espidf::EspIdfVersion> {
-    let unmanaged = espidf::EspIdfVersion::try_from_env_var()?;
+fn esp_idf_reference() -> Result<espidf::EspIdfReference> {
+    let unmanaged = match env::var(espidf::IDF_PATH_VAR) {
+        Err(env::VarError::NotPresent) => None,
+        v => Some(git::Repository::open(v?)?),
+    };
 
     let managed_repo_url = match env::var(ESP_IDF_REPOSITORY_VAR) {
         Err(env::VarError::NotPresent) => None,
@@ -368,7 +373,7 @@ fn esp_idf_version() -> Result<espidf::EspIdfVersion> {
         v => Some(v?),
     };
 
-    if let Some(unmanaged) = unmanaged {
+    let reference = if let Some(unmanaged) = unmanaged {
         if managed_repo_url.is_some() {
             println!(
                 "cargo:warning=User-supplied ESP-IDF detected via {}, setting `{}` will be ignored",
@@ -385,16 +390,19 @@ fn esp_idf_version() -> Result<espidf::EspIdfVersion> {
             );
         }
 
-        Ok(espidf::EspIdfVersion::Unmanaged(unmanaged))
+        espidf::EspIdfReference::Unmanaged(unmanaged)
     } else {
         let managed_version = managed_version
             .as_deref()
             .unwrap_or(DEFAULT_ESP_IDF_VERSION);
 
-        Ok(espidf::EspIdfVersion::Managed(
-            espidf::EspIdfVersion::from_version_str(managed_repo_url, managed_version),
-        ))
-    }
+        espidf::EspIdfReference::Managed(espidf::Managed {
+            repo_url: managed_repo_url,
+            git_ref: espidf::Managed::decode_version_ref(managed_version),
+        })
+    };
+
+    Ok(reference)
 }
 
 // Generate `sdkconfig.defaults` content based on the crate manifest (`Cargo.toml`).

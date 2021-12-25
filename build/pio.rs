@@ -31,11 +31,11 @@ pub fn build() -> Result<EspIdfBuildOutput> {
         let workspace_dir = workspace_dir()?;
         let profile = build_profile();
 
-        let pio_frompath = pio::Pio::detect_from_path()?;
+        let pio_from_env = pio::Pio::try_from_env()?;
 
         let install_location = InstallLocation::get("platformio")?;
 
-        if pio_frompath.is_some()
+        if pio_from_env.is_some()
             && install_location.is_some()
             && !matches!(install_location, Some(InstallLocation::FromPath))
         {
@@ -47,7 +47,7 @@ pub fn build() -> Result<EspIdfBuildOutput> {
 
         let pio = match install_location {
             Some(InstallLocation::FromPath) => {
-                pio_frompath.map(Result::Ok).unwrap_or_else(|| bail!(
+                pio_from_env.map(Result::Ok).unwrap_or_else(|| bail!(
                     "Install location is configured to `{}` via `{}`, however no PlatformIO executable was detected on path", 
                     InstallLocation::FromPath,
                     InstallLocation::get_env_var_name()))?
