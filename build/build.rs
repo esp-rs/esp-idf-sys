@@ -31,7 +31,7 @@ impl ParseCallbacks for BindgenCallbacks {
         // Make sure the ESP_ERR_*, ESP_OK and ESP_FAIL macros are all i32.
         const PREFIX: &str = "ESP_";
         const SUFFIX: &str = "ERR_";
-        const SUFFIX_SPECIAL: [&'static str; 2] = ["OK", "FAIL"];
+        const SUFFIX_SPECIAL: [&str; 2] = ["OK", "FAIL"];
 
         let name = name.strip_prefix(PREFIX)?;
         if name.starts_with(SUFFIX) || SUFFIX_SPECIAL.iter().any(|&s| name == s) {
