@@ -76,6 +76,8 @@ fn main() -> anyhow::Result<()> {
             .blocklist_function("strtold")
             .blocklist_function("_strtold_r")
             .parse_callbacks(Box::new(MbedtlsParseCallbacks))
+            .prepend_enum_name(false)
+            .translate_enum_integer_types(true)
             .clang_args(build_output.components.clang_args())
             .clang_args(vec![
                 "-target",
@@ -123,28 +125,29 @@ impl bindgen::callbacks::ParseCallbacks for MbedtlsParseCallbacks {
         Some(original_item_name.trim_start_matches("mbedtls_").trim_start_matches("MBEDTLS_").to_owned())
     }
 
-    fn enum_variant_name(
-        &self,
-        _enum_name: Option<&str>,
-        original_variant_name: &str,
-        _variant_value: bindgen::callbacks::EnumVariantValue
-    ) -> Option<String> {
-        self.item_name(original_variant_name)
-    }
+    // fn enum_variant_name(
+    //     &self,
+    //     _enum_name: Option<&str>,
+    //     original_variant_name: &str,
+    //     _variant_value: bindgen::callbacks::EnumVariantValue
+    // ) -> Option<String> {
+    //     self.item_name(original_variant_name)
+    // }
 
-    fn int_macro(&self, _name: &str, value: i64) -> Option<bindgen::callbacks::IntKind> {
-        if value < (i32::MIN as i64) || value > (i32::MAX as i64) {
-            Some(bindgen::callbacks::IntKind::LongLong)
-        } else {
-            Some(bindgen::callbacks::IntKind::Int)
-        }
-    }
+    // fn int_macro(&self, _name: &str, value: i64) -> Option<bindgen::callbacks::IntKind> {
+    //     // TODO remove this? changes types to c_int etc 
+    //     if value < (i32::MIN as i64) || value > (i32::MAX as i64) {
+    //         Some(bindgen::callbacks::IntKind::LongLong)
+    //     } else {
+    //         Some(bindgen::callbacks::IntKind::Int)
+    //     }
+    // }
 
-    fn blocklisted_type_implements_trait(&self, _name: &str, derive_trait: bindgen::callbacks::DeriveTrait) -> Option<bindgen::callbacks::ImplementsTrait> {
-        if derive_trait == bindgen::callbacks::DeriveTrait::Default {
-            Some(bindgen::callbacks::ImplementsTrait::Manually)
-        } else {
-            Some(bindgen::callbacks::ImplementsTrait::Yes)
-        }
-    }
+    // fn blocklisted_type_implements_trait(&self, _name: &str, derive_trait: bindgen::callbacks::DeriveTrait) -> Option<bindgen::callbacks::ImplementsTrait> {
+    //     if derive_trait == bindgen::callbacks::DeriveTrait::Default {
+    //         Some(bindgen::callbacks::ImplementsTrait::Manually)
+    //     } else {
+    //         Some(bindgen::callbacks::ImplementsTrait::Yes)
+    //     }
+    // }
 }

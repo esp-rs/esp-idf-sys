@@ -97,9 +97,12 @@ pub mod c_types {
 #[allow(non_snake_case)]
 mod bindings {
     use super::c_types;
+    // use crate::types::*;
 
     include!(env!("EMBUILD_GENERATED_BINDINGS_FILE"));
 }
+
+// pub use crate::types::raw_types as c_types;
 
 #[allow(non_upper_case_globals)]
 #[allow(non_camel_case_types)]
@@ -109,5 +112,42 @@ pub mod types {
     pub mod raw_types {
         pub use crate::c_types::*;
     }
-    pub use crate::bindings::size_t;
+    // pub use std::os::raw as raw_types;
+    
+    // mbedtls assumes defs
+    pub type int8_t = i8;
+    pub type int16_t = i16;
+    pub type int32_t = i32;
+    pub type int64_t = i64;
+    pub type uint8_t = u8;
+    pub type uint16_t = u16;
+    pub type uint32_t = u32;
+    pub type uint64_t = u64;
+    pub type size_t = usize;
+    pub type ssize_t = isize;
+    pub type intptr_t = isize;
+    pub type uintptr_t = usize;
+    pub type ptrdiff_t = isize;
 }
+
+// pub mod c_types {
+//     pub use crate::types::*;
+//     pub use crate::types::raw_types::*;
+// }
+
+
+
+// #[cfg(feature = "std")]
+
+
+// #[cfg(threading_component = "pthread")]
+// pub use self::libc::pthread_mutex_t;
+
+// #[cfg(feature = "zlib")]
+// extern crate libz_sys;
+// #[cfg(feature = "zlib")]
+// pub use self::libz_sys::z_stream;
+
+// #[cfg(feature = "pkcs11")]
+// const ERROR: _PKCS11_NOT_SUPPORTED_ = ();
+
