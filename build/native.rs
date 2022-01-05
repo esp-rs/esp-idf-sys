@@ -310,7 +310,6 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
     // Save information about the esp-idf build to the out dir so that it can be
     // easily retrieved by tools that need it.
     espidf::EspIdfBuildInfo {
-        install_dir: idf.install_dir,
         esp_idf_dir: idf.esp_idf.worktree().to_owned(),
         exported_path_var: idf.exported_path.try_to_str()?.to_owned(),
         venv_python: idf.venv_python,
@@ -321,7 +320,7 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
         sdkconfig,
         sdkconfig_defaults: Some(sdkconfig_defaults),
     }
-    .save_json(out_dir.join("esp-idf-build.json"))?;
+    .save_json(out_dir.join(espidf::BUILD_INFO_FILENAME))?;
 
     let sdkconfig_json = path_buf![&cmake_build_dir, "config", "sdkconfig.json"];
     let build_output = EspIdfBuildOutput {

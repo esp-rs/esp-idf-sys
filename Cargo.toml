@@ -31,8 +31,8 @@ native = ["embuild/cmake", "embuild/espidf", "strum"]
 paste = "1"
 
 [build-dependencies]
-embuild = { version = "0.27", features = ["glob"] }
+embuild = { version = "0.28", features = ["glob"] }
 anyhow = "1"
-strum = { version = "0.21", features = ["derive"], optional = true }
+strum = { version = "0.23", features = ["derive"], optional = true }
 regex = "1.5"
 bindgen = "0.59"
