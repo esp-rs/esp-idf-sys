@@ -46,6 +46,10 @@
 #include "esp_tls.h"
 #endif
 
+#ifdef ESP_IDF_COMP_ESP_VFS_FAT_ENABLED
+#include "esp_vfs_fat.h"
+#endif
+
 #ifdef ESP_IDF_COMP_APP_UPDATE_ENABLED
 #include "esp_ota_ops.h"
 #endif
