@@ -100,9 +100,6 @@ pub fn build() -> Result<EspIdfBuildOutput> {
             .files(sdkconfig_defaults);
 
         let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
-        for patch in STABLE_PATCHES {
-            builder.platform_package_patch(manifest_dir.join(patch), path_buf!["framework-espidf"]);
-        }
 
         let project_path = builder.generate(&resolution)?;
 
