@@ -18,14 +18,14 @@ use strum::{Display, EnumString};
 use super::common::{
     self, get_install_dir, list_specific_sdkconfigs, workspace_dir, EspIdfBuildOutput,
     EspIdfComponents, ESP_IDF_GLOB_VAR_PREFIX, ESP_IDF_SDKCONFIG_DEFAULTS_VAR,
-    ESP_IDF_SDKCONFIG_VAR, ESP_IDF_TOOLS_INSTALL_DIR_VAR, MASTER_PATCHES, MCU_VAR, STABLE_PATCHES,
+    ESP_IDF_SDKCONFIG_VAR, ESP_IDF_TOOLS_INSTALL_DIR_VAR, MASTER_PATCHES, MCU_VAR, FOUR_THREE_PATCHES,
 };
 use crate::common::{SDKCONFIG_DEFAULTS_FILE, SDKCONFIG_FILE};
 
 const ESP_IDF_VERSION_VAR: &str = "ESP_IDF_VERSION";
 const ESP_IDF_REPOSITORY_VAR: &str = "ESP_IDF_REPOSITORY";
 
-const DEFAULT_ESP_IDF_VERSION: &str = "v4.3.1";
+const DEFAULT_ESP_IDF_VERSION: &str = "v4.4.0";
 
 const CARGO_CMAKE_BUILD_ACTIVE_VAR: &str = "CARGO_CMAKE_BUILD_ACTIVE";
 const CARGO_CMAKE_BUILD_INCLUDES_VAR: &str = "CARGO_CMAKE_BUILD_INCLUDES";
@@ -139,7 +139,7 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
         git::Ref::Branch(b) if idf.esp_idf.get_default_branch()?.as_ref() == Some(b) => {
             MASTER_PATCHES
         }
-        git::Ref::Tag(t) if t == DEFAULT_ESP_IDF_VERSION => STABLE_PATCHES,
+        git::Ref::Tag(t) if t.starts_with("4.3") => FOUR_THREE_PATCHES,
         _ => {
             cargo::print_warning(format_args!(
                 "`esp-idf` version ({:?}) not officially supported by `esp-idf-sys`. \
