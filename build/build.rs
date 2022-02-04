@@ -3,7 +3,12 @@ compile_error!("One of the features `pio` or `native` must be selected.");
 
 use anyhow::*;
 
-use std::{env, iter::once, path::PathBuf};
+use std::{
+    collections::{HashMap, HashSet},
+    env,
+    iter::once,
+    path::PathBuf,
+};
 
 use embuild::{bindgen as embindgen, build, cargo, kconfig, path_buf, utils::OsStrExt};
 
@@ -67,6 +72,35 @@ fn main() -> anyhow::Result<()> {
 
     cargo::track_file(&header_file);
 
+    // hard coded features, derived manually from the build script inside
+    let platform_components: HashMap<&'static str, HashSet<&'static str>> = [
+        ("threading", ["pthread"].into()),
+        ("std", ["net", "entropy", "fs"].into()),
+        ("time", ["libc"].into()), /* we might need custom time instead */
+    ]
+    .into();
+
+    for (feature, components) in &platform_components {
+        for component in components {
+            println!(r#"cargo:rustc-cfg={}_component="{}""#, feature, component);
+        }
+    }
+    // TODO this may need to be a hard coded env variable DEP_MBEDTLS_PLATFORM_COMPONENTS
+    // at the moment I _think_ its emitting DEP_ESPIDF_PLATFORM_COMPONENTS or soomething like that
+    // "cargo:rustc-env=DEP_MBEDTLS_PLATFORM_COMPONENTS={}",
+    println!(
+        "cargo:platform-components={}",
+        platform_components
+            .iter()
+            .flat_map(|(feature, components)| {
+                components
+                    .iter()
+                    .map(move |component| format!(r#"{}_component={}"#, feature, component))
+            })
+            .collect::<Vec<_>>()
+            .join(",")
+    );
+
     let bindings_file = embindgen::run(
         build_output
             .bindgen
@@ -76,6 +110,7 @@ fn main() -> anyhow::Result<()> {
             .blocklist_function("strtold")
             .blocklist_function("_strtold_r")
             .parse_callbacks(Box::new(MbedtlsParseCallbacks))
+            .size_t_is_usize(true) /* mbedtls requires size_t to be usize, default def is u32. */
             .prepend_enum_name(false)
             .translate_enum_integer_types(true)
             .clang_args(build_output.components.clang_args())
@@ -119,29 +154,36 @@ struct MbedtlsParseCallbacks;
 
 impl bindgen::callbacks::ParseCallbacks for MbedtlsParseCallbacks {
     fn item_name(&self, original_item_name: &str) -> Option<String> {
-        if original_item_name == "mbedtls_time_t" { // TODO better fix for this
+        if original_item_name == "mbedtls_time_t" {
+            // TODO better fix for this
             return None;
         }
-        Some(original_item_name.trim_start_matches("mbedtls_").trim_start_matches("MBEDTLS_").to_owned())
+        Some(
+            original_item_name
+                .trim_start_matches("mbedtls_")
+                .trim_start_matches("MBEDTLS_")
+                .trim_start_matches("KW_")
+                .to_owned(),
+        )
     }
 
-    // fn enum_variant_name(
-    //     &self,
-    //     _enum_name: Option<&str>,
-    //     original_variant_name: &str,
-    //     _variant_value: bindgen::callbacks::EnumVariantValue
-    // ) -> Option<String> {
-    //     self.item_name(original_variant_name)
-    // }
+    fn enum_variant_name(
+        &self,
+        _enum_name: Option<&str>,
+        original_variant_name: &str,
+        _variant_value: bindgen::callbacks::EnumVariantValue,
+    ) -> Option<String> {
+        self.item_name(original_variant_name)
+    }
 
-    // fn int_macro(&self, _name: &str, value: i64) -> Option<bindgen::callbacks::IntKind> {
-    //     // TODO remove this? changes types to c_int etc 
-    //     if value < (i32::MIN as i64) || value > (i32::MAX as i64) {
-    //         Some(bindgen::callbacks::IntKind::LongLong)
-    //     } else {
-    //         Some(bindgen::callbacks::IntKind::Int)
-    //     }
-    // }
+    fn int_macro(&self, _name: &str, value: i64) -> Option<bindgen::callbacks::IntKind> {
+        // TODO remove this? changes types to c_int etc, maybe we should only do this for mbedtls types?
+        if value < (i32::MIN as i64) || value > (i32::MAX as i64) {
+            Some(bindgen::callbacks::IntKind::LongLong)
+        } else {
+            Some(bindgen::callbacks::IntKind::Int)
+        }
+    }
 
     // fn blocklisted_type_implements_trait(&self, _name: &str, derive_trait: bindgen::callbacks::DeriveTrait) -> Option<bindgen::callbacks::ImplementsTrait> {
     //     if derive_trait == bindgen::callbacks::DeriveTrait::Default {

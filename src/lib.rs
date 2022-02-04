@@ -110,9 +110,8 @@ mod bindings {
 // wrapper required for mbedlts
 pub mod types {
     pub mod raw_types {
-        pub use crate::c_types::*;
+        pub use std::os::raw::*;
     }
-    // pub use std::os::raw as raw_types;
     
     // mbedtls assumes defs
     pub type int8_t = i8;
@@ -135,10 +134,7 @@ pub mod types {
 //     pub use crate::types::raw_types::*;
 // }
 
-
-
 // #[cfg(feature = "std")]
-
 
 // #[cfg(threading_component = "pthread")]
 // pub use self::libc::pthread_mutex_t;
@@ -150,4 +146,3 @@ pub mod types {
 
 // #[cfg(feature = "pkcs11")]
 // const ERROR: _PKCS11_NOT_SUPPORTED_ = ();
-
