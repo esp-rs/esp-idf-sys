@@ -2,7 +2,7 @@
 
 ## Background
 
-The ESP-IDF API in Rust, with support for each ESP chip (ESP32, ESP32S2, ESP32C3 etc.) based on the Rust target.
+The ESP-IDF API in Rust, with support for each ESP chip (ESP32, ESP32S2, ESP32S3, ESP32C3 etc.) based on the Rust target.
 
 ![CI](https://github.com/esp-rs/esp-idf-sys/actions/workflows/ci.yml/badge.svg)
 
@@ -54,13 +54,39 @@ The following environment variables are used by the build script:
     A `;`-separated list of paths to `sdkconfig.defaults` files to be used as base
     values for the `sdkconfig`. If such a path is relative, it will be relative to the
     cargo workspace directory (i.e. the directory that contains the `target` dir).
+    
+    If unspecified `sdkconfig.defaults` is used as default.
+    
+    For each defaults file in this list more specific version will also be searched and
+    used. This happens with the following patterns and order (least to most specific):
 
+    1. `<path>`
+    2. `<path>.<profile>`
+    3. `<path>.<mcu>`
+    4. `<path>.<profile>.<mcu>`
+    
+    where `<profile>` is the current cargo profile used (`debug`/`release`) and `<mcu>`
+    specifies the mcu for which this is currently compiled for (see the `MCU`
+    configuration option below).
+
+    Also note that a setting contained in a more specific defaults file will override the
+    same setting specified in a less specific one.
 
 - `ESP_IDF_SDKCONFIG`:     
 
-    The path to the `sdkconfig` file used to [configure the
+    The base-path to the `sdkconfig` file used to [configure the
     `esp-idf`](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-reference/kconfig.html).
     If this is a relative path, it is relative to the cargo workspace directory.
+    
+    If unspecified `sdkconfig` is used as default.
+    
+    Similar to the `sdkconfig.defaults`-file a more specific `sdkconfig`-file will be
+    selected if available. This happens with the following patterns and precedence:
+
+    1. `<path>.<profile>.<mcu>`
+    2. `<path>.<mcu>`
+    3. `<path>.<profile>`
+    4. `<path>`
 
     **Note** (*native* builder only):   
     The cargo optimization options (`debug` and `opt-level`) are used by default to
@@ -131,6 +157,11 @@ The following environment variables are used by the build script:
   - Check [the PlatformIO documentation](https://docs.platformio.org/en/latest/projectconf/index.html) for more information as to what settings you can pass via this variable.
   - Note also that this is not one variable - but rather - a family of variables all starting with `ESP_IDF_PIO_CONF_`. I.e., passing `ESP_IDF_PIO_CONF_1` as well as `ESP_IDF_PIO_CONF_FOO` is valid and all such variables will be honored
 
+- `ESP_IDF_CMAKE_GENERATOR` (*native* builder only):
+
+  The CMake generator to be used when building the ESP-IDF SDK. If not specified or set to `default`, Ninja will be used on all platforms except Linux/aarch64, where
+  (for now) the Unix Makefiles generator will be used, as there are no Ninja builds for that platform provided by Espressif yet.
+  Possible values for this environment variable are [the names of all command-line generators that CMake supports](https://cmake.org/cmake/help/latest/manual/cmake-generators.7.html#cmake-generators) with **spaces and hyphens removed**.
 
 - `MCU`:
 

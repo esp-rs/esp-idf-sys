@@ -2,35 +2,41 @@
 
 use std::convert::TryFrom;
 use std::ffi::OsString;
+use std::iter;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
 use std::{env, fs};
 
-use anyhow::*;
+use anyhow::{anyhow, bail, Context, Error, Result};
+
+use strum::{Display, EnumString, IntoEnumIterator};
+
 use embuild::cmake::file_api::codemodel::Language;
 use embuild::cmake::file_api::ObjKind;
 use embuild::espidf::InstallOpts;
 use embuild::fs::copy_file_if_different;
 use embuild::utils::{OsStrExt, PathExt};
 use embuild::{bindgen, build, cargo, cmake, espidf, git, kconfig, path_buf};
-use strum::{Display, EnumString};
 
 use super::common::{
-    self, get_install_dir, get_sdkconfig_profile, workspace_dir, EspIdfBuildOutput,
+    self, get_install_dir, list_specific_sdkconfigs, workspace_dir, EspIdfBuildOutput,
     EspIdfComponents, ESP_IDF_GLOB_VAR_PREFIX, ESP_IDF_SDKCONFIG_DEFAULTS_VAR,
-    ESP_IDF_SDKCONFIG_VAR, ESP_IDF_TOOLS_INSTALL_DIR_VAR, MASTER_PATCHES, MCU_VAR, STABLE_PATCHES,
+    ESP_IDF_SDKCONFIG_VAR, ESP_IDF_TOOLS_INSTALL_DIR_VAR, MCU_VAR, NO_PATCHES, V_4_3_2_PATCHES,
 };
+use crate::common::{SDKCONFIG_DEFAULTS_FILE, SDKCONFIG_FILE};
 
 const ESP_IDF_VERSION_VAR: &str = "ESP_IDF_VERSION";
 const ESP_IDF_REPOSITORY_VAR: &str = "ESP_IDF_REPOSITORY";
+pub const ESP_IDF_CMAKE_GENERATOR: &str = "ESP_IDF_CMAKE_GENERATOR";
 
-const DEFAULT_ESP_IDF_VERSION: &str = "v4.3.1";
+const DEFAULT_ESP_IDF_VERSION: &str = "v4.3.2";
 
 const CARGO_CMAKE_BUILD_ACTIVE_VAR: &str = "CARGO_CMAKE_BUILD_ACTIVE";
 const CARGO_CMAKE_BUILD_INCLUDES_VAR: &str = "CARGO_CMAKE_BUILD_INCLUDES";
 const CARGO_CMAKE_BUILD_LINK_LIBRARIES_VAR: &str = "CARGO_CMAKE_BUILD_LINK_LIBRARIES";
 const CARGO_CMAKE_BUILD_COMPILER_VAR: &str = "CARGO_CMAKE_BUILD_COMPILER";
 const CARGO_CMAKE_BUILD_SDKCONFIG_VAR: &str = "CARGO_CMAKE_BUILD_SDKCONFIG";
+const CARGO_CMAKE_BUILD_ESP_IDF_VAR: &str = "CARGO_CMAKE_BUILD_ESP_IDF";
 
 pub fn build() -> Result<EspIdfBuildOutput> {
     if env::var(CARGO_CMAKE_BUILD_ACTIVE_VAR).is_ok()
@@ -84,6 +90,8 @@ fn build_cmake_first() -> Result<EspIdfBuildOutput> {
                     .map(|dir| format!("-I{}", dir))
                     .collect::<Vec<_>>(),
             ),
+        env_path: None,
+        esp_idf: PathBuf::from(env::var(CARGO_CMAKE_BUILD_ESP_IDF_VAR)?),
     };
 
     Ok(build_output)
@@ -111,16 +119,23 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
     cargo::track_env_var(MCU_VAR);
 
     let cmake_tool = espidf::Tools::cmake()?;
+
+    let cmake_generator = get_cmake_generator()?;
+
     let tools = espidf::Tools::new(
-        vec!["ninja", chip.gcc_toolchain()]
-            .into_iter()
-            .chain(chip.ulp_gcc_toolchain()),
+        iter::once(chip.gcc_toolchain())
+            .chain(chip.ulp_gcc_toolchain())
+            .chain(if cmake_generator == cmake::Generator::Ninja {
+                Some("ninja")
+            } else {
+                None
+            }),
     );
 
     let install_dir = get_install_dir("espressif")?;
     let idf = espidf::Installer::new(esp_idf_version()?)
         .opts(InstallOpts::empty())
-        .local_install_dir(install_dir)
+        .local_install_dir(install_dir.clone())
         .git_url(match env::var(ESP_IDF_REPOSITORY_VAR) {
             Err(env::VarError::NotPresent) => None,
             git_url => Some(git_url?),
@@ -132,15 +147,19 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
 
     // Apply patches, only if the patches were not previously applied.
     let patch_set = match &idf.esp_idf_version {
-        git::Ref::Branch(b) if idf.esp_idf.get_default_branch()?.as_ref() == Some(b) => {
-            MASTER_PATCHES
+        git::Ref::Branch(b)
+            if b == "release/v4.4" || idf.esp_idf.get_default_branch()?.as_ref() == Some(b) =>
+        {
+            NO_PATCHES
         }
-        git::Ref::Tag(t) if t == DEFAULT_ESP_IDF_VERSION => STABLE_PATCHES,
+        git::Ref::Branch(b) if b == "release/v4.3" => V_4_3_2_PATCHES,
+        git::Ref::Tag(t) if t.starts_with("v4.4") => NO_PATCHES,
+        git::Ref::Tag(t) if t == "v4.3.2" => V_4_3_2_PATCHES,
         _ => {
             cargo::print_warning(format_args!(
                 "`esp-idf` version ({:?}) not officially supported by `esp-idf-sys`. \
-                 Supported versions are 'master', '{}'.",
-                &idf.esp_idf_version, DEFAULT_ESP_IDF_VERSION
+                 Supported versions are 'master', 'release/v4.4', 'release/v4.3', 'v4.4(.X)', 'v4.3.2'.",
+                 &idf.esp_idf_version,
             ));
             &[]
         }
@@ -177,14 +196,16 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
 
     // Resolve `ESP_IDF_SDKCONFIG` and `ESP_IDF_SDKCONFIG_DEFAULTS` to an absolute path
     // relative to the workspace directory if not empty.
-    let sdkconfig = env::var_os(ESP_IDF_SDKCONFIG_VAR)
-        .map(|s| {
-            let path = Path::new(&s).abspath_relative_to(&workspace_dir);
-            let path = get_sdkconfig_profile(&path, &profile, &chip_name).unwrap_or(path);
-            cargo::track_file(&path);
-            path
-        })
-        .filter(|v| v.exists());
+    let sdkconfig = {
+        let file = env::var_os(ESP_IDF_SDKCONFIG_VAR).unwrap_or_else(|| SDKCONFIG_FILE.into());
+        let path = Path::new(&file).abspath_relative_to(&workspace_dir);
+        let cfg = list_specific_sdkconfigs(path, &profile, &chip_name).next();
+        if let Some(ref file) = cfg {
+            cargo::track_file(file);
+        }
+        cfg
+    };
+
     let sdkconfig_defaults = {
         let gen_defaults_path = out_dir.join("gen-sdkconfig.defaults");
         fs::write(&gen_defaults_path, generate_sdkconfig_defaults()?)?;
@@ -192,21 +213,28 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
         let mut result = vec![gen_defaults_path];
         result.extend(
             env::var_os(ESP_IDF_SDKCONFIG_DEFAULTS_VAR)
-                .unwrap_or_default()
+                .unwrap_or_else(|| SDKCONFIG_DEFAULTS_FILE.into())
                 .try_to_str()?
                 .split(';')
                 .filter_map(|v| {
                     if !v.is_empty() {
                         let path = Path::new(v).abspath_relative_to(&workspace_dir);
-                        cargo::track_file(&path);
-                        Some(path)
+                        Some(
+                            list_specific_sdkconfigs(path, &profile, &chip_name)
+                                // We need to reverse the order here so that the more
+                                // specific defaults come last.
+                                .rev()
+                                .inspect(|p| cargo::track_file(p)),
+                        )
                     } else {
                         None
                     }
-                }),
+                })
+                .flatten(),
         );
         result
     };
+
     let defaults_files = sdkconfig_defaults
         .iter()
         // Use the `sdkconfig` as a defaults file to prevent it from being changed by the
@@ -239,7 +267,15 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
     // overwritten because `cmake::Config` also sets these (see
     // https://github.com/espressif/esp-idf/issues/7507).
     let (asm_flags, c_flags, cxx_flags) = {
-        let mut vars = cmake::get_script_variables(&cmake_toolchain_file)?;
+        let extractor_script = cmake::script_variables_extractor(&cmake_toolchain_file)?;
+
+        let output = embuild::cmd_output!(
+            cmake::cmake(),
+            "-P",
+            extractor_script.as_ref().as_os_str();
+            env=("IDF_PATH", &idf.esp_idf.worktree().as_os_str()))?;
+
+        let mut vars = cmake::process_script_variables_extractor_output(output)?;
         (
             vars.remove("CMAKE_ASM_FLAGS").unwrap_or_default(),
             vars.remove("CMAKE_C_FLAGS").unwrap_or_default(),
@@ -257,9 +293,10 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
         &[ObjKind::Codemodel, ObjKind::Toolchains],
     )?;
 
-    // Build the esp-idf.
-    cmake::Config::new(&out_dir)
-        .generator("Ninja")
+    let mut cmake_config = cmake::Config::new(&out_dir);
+
+    cmake_config
+        .generator(cmake_generator.name())
         .out_dir(&out_dir)
         .no_build_target(true)
         .define("CMAKE_TOOLCHAIN_FILE", &cmake_toolchain_file)
@@ -272,8 +309,14 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
         .env("IDF_PATH", &idf.esp_idf.worktree())
         .env("PATH", &idf.exported_path)
         .env("SDKCONFIG_DEFAULTS", defaults_files)
-        .env("IDF_TARGET", &chip_name)
-        .build();
+        .env("IDF_TARGET", &chip_name);
+
+    if let Some(install_dir) = install_dir {
+        cmake_config.env("IDF_TOOLS_PATH", install_dir);
+    }
+
+    // Build the esp-idf.
+    cmake_config.build();
 
     let replies = query.get_replies()?;
     let target = replies
@@ -297,8 +340,22 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
         })
         .context("Could not determine the compiler from cmake")?;
 
-    let sdkconfig_json = path_buf![&cmake_build_dir, "config", "sdkconfig.json"];
+    // Save information about the esp-idf build to the out dir so that it can be
+    // easily retrieved by tools that need it.
+    espidf::EspIdfBuildInfo {
+        esp_idf_dir: idf.esp_idf.worktree().to_owned(),
+        exported_path_var: idf.exported_path.try_to_str()?.to_owned(),
+        venv_python: idf.venv_python,
+        build_dir: cmake_build_dir.clone(),
+        project_dir: out_dir.clone(),
+        compiler: compiler.clone(),
+        mcu: chip_name,
+        sdkconfig,
+        sdkconfig_defaults: Some(sdkconfig_defaults),
+    }
+    .save_json(out_dir.join(espidf::BUILD_INFO_FILENAME))?;
 
+    let sdkconfig_json = path_buf![&cmake_build_dir, "config", "sdkconfig.json"];
     let build_output = EspIdfBuildOutput {
         cincl_args: build::CInclArgs::try_from(&target.compile_groups[0])?,
         link_args: Some(
@@ -314,6 +371,8 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
             kconfig::try_from_json_file(sdkconfig_json.clone())
                 .with_context(|| anyhow!("Failed to read '{:?}'", sdkconfig_json))?,
         ),
+        env_path: Some(idf.exported_path.try_to_str()?.to_owned()),
+        esp_idf: idf.esp_idf.worktree().to_owned(),
     };
 
     Ok(build_output)
@@ -353,6 +412,39 @@ fn generate_sdkconfig_defaults() -> Result<String> {
         .enumerate()
         .map(|(i, s)| format!("{}={}\n", s, if i == opt_index { 'y' } else { 'n' }))
         .collect::<String>())
+}
+
+fn get_cmake_generator() -> Result<cmake::Generator> {
+    let generator = match env::var(ESP_IDF_CMAKE_GENERATOR) {
+        Err(env::VarError::NotPresent) => None,
+        var => Some(var?),
+    };
+
+    let generator = match generator.as_deref() {
+        None | Some("default") => {
+            // No Ninja builds for linux=aarch64 from Espressif yet
+            #[cfg(all(target_os = "linux", target_arch = "aarch64"))]
+            {
+                cmake::Generator::UnixMakefiles
+            }
+
+            #[cfg(not(all(target_os = "linux", target_arch = "aarch64")))]
+            {
+                cmake::Generator::Ninja
+            }
+        }
+        Some(other) => cmake::Generator::from_str(other).map_err(|_| {
+            anyhow::anyhow!(
+                "Invalid CMake generator. Should be either `default`, or one of [{}]",
+                cmake::Generator::iter()
+                    .map(|e| e.into())
+                    .collect::<Vec<&'static str>>()
+                    .join(", ")
+            )
+        })?,
+    };
+
+    Ok(generator)
 }
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug, Display, EnumString)]
@@ -403,7 +495,7 @@ impl Chip {
     fn ulp_gcc_toolchain(self) -> Option<&'static str> {
         match self {
             Self::ESP32 => Some("esp32ulp-elf"),
-            Self::ESP32S2 => Some("esp32s2ulp-elf"),
+            Self::ESP32S2 | Self::ESP32S3 => Some("esp32s2ulp-elf"),
             _ => None,
         }
     }

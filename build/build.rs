@@ -1,18 +1,15 @@
 #[cfg(not(any(feature = "pio", feature = "native")))]
 compile_error!("One of the features `pio` or `native` must be selected.");
 
+use std::env;
+use std::iter::once;
+use std::path::PathBuf;
+
+use ::bindgen::callbacks::{IntKind, ParseCallbacks};
 use anyhow::*;
-
-use std::{
-    collections::{HashMap, HashSet},
-    env,
-    iter::once,
-    path::PathBuf,
-};
-
-use embuild::{bindgen as embindgen, build, cargo, kconfig, path_buf, utils::OsStrExt};
-
 use common::*;
+use embuild::utils::OsStrExt;
+use embuild::{bindgen, build, cargo, kconfig, path_buf};
 
 mod common;
 
@@ -25,6 +22,25 @@ mod common;
 #[cfg_attr(feature = "native", path = "native.rs")]
 #[cfg_attr(all(feature = "pio", not(feature = "native")), path = "pio.rs")]
 mod build_driver;
+
+#[derive(Debug)]
+struct BindgenCallbacks;
+
+impl ParseCallbacks for BindgenCallbacks {
+    fn int_macro(&self, name: &str, _value: i64) -> Option<IntKind> {
+        // Make sure the ESP_ERR_*, ESP_OK and ESP_FAIL macros are all i32.
+        const PREFIX: &str = "ESP_";
+        const SUFFIX: &str = "ERR_";
+        const SUFFIX_SPECIAL: [&str; 2] = ["OK", "FAIL"];
+
+        let name = name.strip_prefix(PREFIX)?;
+        if name.starts_with(SUFFIX) || SUFFIX_SPECIAL.iter().any(|&s| name == s) {
+            Some(IntKind::I32)
+        } else {
+            None
+        }
+    }
+}
 
 fn main() -> anyhow::Result<()> {
     let build_output = build_driver::build()?;
@@ -105,6 +121,7 @@ fn main() -> anyhow::Result<()> {
         build_output
             .bindgen
             .builder()?
+            .parse_callbacks(Box::new(BindgenCallbacks))
             .ctypes_prefix("c_types")
             .header(header_file.try_to_str()?)
             .blocklist_function("strtold")
@@ -113,6 +130,11 @@ fn main() -> anyhow::Result<()> {
             .size_t_is_usize(true) /* mbedtls requires size_t to be usize, default def is u32. */
             .prepend_enum_name(false)
             .translate_enum_integer_types(true)
+            .blocklist_function("v.*printf")
+            .blocklist_function("v.*scanf")
+            .blocklist_function("_v.*printf_r")
+            .blocklist_function("_v.*scanf_r")
+            .blocklist_function("esp_log_writev")
             .clang_args(build_output.components.clang_args())
             .clang_args(vec![
                 "-target",
@@ -139,7 +161,19 @@ fn main() -> anyhow::Result<()> {
     cfg_args.propagate();
     cfg_args.output();
 
-    // In case other SYS crates need to have access to the ESP-IDF C headers
+    // In case other crates need to have access to the ESP-IDF C headers
+    build_output.cincl_args.propagate();
+
+    // In case other crates need to have access to the ESP-IDF toolchains
+    if let Some(env_path) = build_output.env_path {
+        // TODO: Replace with embuild::build::VAR_ENV_PATH once we have a new embuild release
+        cargo::set_metadata("EMBUILD_ENV_PATH", env_path);
+    }
+
+    // In case other crates need to the ESP-IDF SDK
+    // TODO: Replace with embuild::espidf::XXX paths once we have a new embuild release
+    cargo::set_metadata("EMBUILD_ESP_IDF_PATH", build_output.esp_idf.try_to_str()?);
+
     build_output.cincl_args.propagate();
 
     if let Some(link_args) = build_output.link_args {

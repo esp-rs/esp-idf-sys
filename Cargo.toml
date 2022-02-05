@@ -1,8 +1,8 @@
 [package]
 name = "esp-idf-sys"
-version = "0.28.2"
+version = "0.30.4"
 authors = ["Alexey Arbuzov <aarbuzov@termt.com>", "sapir <yasapir@gmail.com>", "Ivan Markov <ivan.markov@gmail.com>"]
-edition = "2018"
+edition = "2021"
 resolver = "2"
 categories = ["embedded", "hardware-support"]
 keywords = ["sys", "idf", "esp-idf", "esp32"]
@@ -12,11 +12,12 @@ license = "MIT OR Apache-2.0"
 readme = "README.md"
 links = "esp_idf"
 build = "build/build.rs"
+documentation = "https://esp-rs.github.io/esp-idf-sys/"
 
 [features]
 default = ["std", "pio"]
 
-std = ["embedded-svc/std"]
+std = []
 alloc_handler = []
 panic_handler = []
 binstart = []
@@ -25,16 +26,14 @@ libstart = []
 # Use `platformio` to build the `esp-idf`
 pio = ["embuild/pio"]
 # Experimental: Use native `esp-idf` tooling to build it
-native = ["embuild/cmake", "embuild/espidf"]
+native = ["embuild/cmake", "embuild/espidf", "strum"]
 
 [dependencies]
-mutex-trait = "0.2"
-embedded-svc = { version = "0.15.4", default-features = false }
 paste = "1"
 
 [build-dependencies]
-embuild = { version = "0.27", features = ["glob"] }
+embuild = { version = "0.28.4", features = ["glob"] }
 anyhow = "1"
-strum = { version = "0.21", features = ["derive"] }
+strum = { version = "0.23", features = ["derive"], optional = true }
 regex = "1.5"
 bindgen = "0.59.2"

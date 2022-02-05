@@ -1,9 +1,8 @@
 //! Install tools and build the `esp-idf` using `platformio`.
 
 use std::convert::TryFrom;
-use std::env;
-use std::fs;
 use std::path::{Path, PathBuf};
+use std::{env, fs};
 
 use anyhow::*;
 use embuild::pio::project;
@@ -54,26 +53,39 @@ pub fn build() -> Result<EspIdfBuildOutput> {
 
         // Resolve `ESP_IDF_SDKCONFIG` and `ESP_IDF_SDKCONFIG_DEFAULTS` to an absolute path
         // relative to the workspace directory if not empty.
-        let sdkconfig = env::var_os(ESP_IDF_SDKCONFIG_VAR)
-            .filter(|v| !v.is_empty())
-            .map(|v| {
-                let path = Path::new(&v).abspath_relative_to(&workspace_dir);
-                let path = get_sdkconfig_profile(&path, &profile, &resolution.mcu).unwrap_or(path);
+        let sdkconfig = {
+            let file = env::var_os(ESP_IDF_SDKCONFIG_VAR).unwrap_or_else(|| SDKCONFIG_FILE.into());
+            let path = Path::new(&file).abspath_relative_to(&workspace_dir);
+            let cfg = list_specific_sdkconfigs(path, &profile, &resolution.mcu).next();
+
+            cfg.map(|path| {
                 cargo::track_file(&path);
 
                 (path, format!("sdkconfig.{}", profile).into())
-            });
+            })
+        };
 
-        let sdkconfig_defaults_var =
-            env::var_os(ESP_IDF_SDKCONFIG_DEFAULTS_VAR).unwrap_or_default();
+        let sdkconfig_defaults_var = env::var_os(ESP_IDF_SDKCONFIG_DEFAULTS_VAR)
+            .unwrap_or_else(|| SDKCONFIG_DEFAULTS_FILE.into());
         let sdkconfig_defaults = sdkconfig_defaults_var
             .try_to_str()?
             .split(';')
-            .filter(|v| !v.is_empty())
-            .map(|v| {
-                let path = Path::new(v).abspath_relative_to(&workspace_dir);
+            .filter_map(|v| {
+                if !v.is_empty() {
+                    let path = Path::new(v).abspath_relative_to(&workspace_dir);
+                    Some(
+                        list_specific_sdkconfigs(path, &profile, &resolution.mcu)
+                            // We need to reverse the order here so that the more
+                            // specific defaults come last.
+                            .rev(),
+                    )
+                } else {
+                    None
+                }
+            })
+            .flatten()
+            .map(|path| {
                 cargo::track_file(&path);
-
                 let file_name = PathBuf::from(path.file_name().unwrap());
                 (path, file_name)
             });
@@ -88,7 +100,7 @@ pub fn build() -> Result<EspIdfBuildOutput> {
             .files(sdkconfig_defaults);
 
         let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
-        for patch in STABLE_PATCHES {
+        for patch in V_4_3_2_PATCHES {
             builder.platform_package_patch(manifest_dir.join(patch), path_buf!["framework-espidf"]);
         }
 
@@ -114,6 +126,7 @@ pub fn build() -> Result<EspIdfBuildOutput> {
 
     let build_output = EspIdfBuildOutput {
         cincl_args: build::CInclArgs::try_from(&pio_scons_vars)?,
+        env_path: link_args.as_ref().map(|_| pio_scons_vars.path.clone()),
         link_args,
         bindgen: bindgen::Factory::from_scons_vars(&pio_scons_vars)?
             .with_clang_args(EspIdfComponents::new().clang_args().collect::<Vec<_>>()),
@@ -130,6 +143,7 @@ pub fn build() -> Result<EspIdfBuildOutput> {
                     )
                 }),
         ),
+        esp_idf: PathBuf::from(pio_scons_vars.pio_framework_dir),
     };
 
     Ok(build_output)

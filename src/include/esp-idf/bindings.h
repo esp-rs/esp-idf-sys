@@ -32,15 +32,43 @@
 #include "esp_eth.h"
 #include "esp_eth_netif_glue.h"
 
+#ifdef ESP_IDF_COMP_VFS_ENABLED
 #include "esp_vfs.h"
+#include "esp_vfs_cdcacm.h"
+#include "esp_vfs_dev.h"
+#include "esp_vfs_semihost.h"
+#include "esp_vfs_usb_serial_jtag.h"
+
+#if ((ESP_IDF_VERSION_MAJOR > 4) || ((ESP_IDF_VERSION_MAJOR == 4) && (ESP_IDF_VERSION_MINOR >= 4)))
+#include "esp_vfs_console.h"
+#endif
+
 #if ((ESP_IDF_VERSION_MAJOR > 4) || ((ESP_IDF_VERSION_MAJOR == 4) && (ESP_IDF_VERSION_MINOR >= 4)))
 #include "esp_vfs_eventfd.h"
+#endif
+
+#ifdef ESP_IDF_COMP_SPIFFS_ENABLED
+#include "esp_spiffs.h"
+#endif
+
+#ifdef ESP_IDF_COMP_FATFS_ENABLED
+#include "esp_vfs_fat.h"
+#endif
+
 #endif
 
 #include "lwip/lwip_napt.h"
 #include "esp_sntp.h"
 
 #include "ping/ping_sock.h"
+
+#ifdef ESP_IDF_COMP_ESP_TLS_ENABLED
+#include "esp_tls.h"
+
+#ifdef CONFIG_ESP_TLS_USING_MBEDTLS
+#include "esp_crt_bundle.h"
+#endif
+#endif
 
 #ifdef ESP_IDF_COMP_APP_UPDATE_ENABLED
 #include "esp_ota_ops.h"
@@ -139,6 +167,10 @@
 #include "mbedtls/arc4.h"
 #include "mbedtls/aesni.h"
 // #endif
+#ifdef ESP_IDF_COMP_SOC_ENABLED
+// TODO: Include all XXX_periph.h headers here
+#include "soc/gpio_periph.h"
+#endif
 
 #include "driver/adc.h"
 #include "driver/twai.h"
@@ -192,22 +224,26 @@
 #include "esp_pthread.h"
 #endif
 
-#ifdef CONFIG_ESP32S2_ULP_COPROC_ENABLED
-#ifdef CONFIG_IDF_TARGET_ESP32
+#ifdef CONFIG_ESP32_ULP_COPROC_ENABLED
 #include "esp32/ulp.h"
 #endif
 
-#ifdef CONFIG_IDF_TARGET_ESP32S2
-#include "esp32s2/ulp.h"
+#ifdef CONFIG_ESP32S2_ULP_COPROC_ENABLED
 #ifdef CONFIG_ESP32S2_ULP_COPROC_RISCV
 #include "esp32s2/ulp_riscv.h"
+#else
+#include "esp32s2/ulp.h"
 #endif
 #endif
 
-#ifdef CONFIG_IDF_TARGET_ESP32S3
-#include "esp32s3/ulp.h"
+#ifdef CONFIG_ESP32S3_ULP_COPROC_ENABLED
+#ifdef CONFIG_ESP32S3_ULP_COPROC_RISCV
+#include "esp32s3/ulp_riscv.h"
+#else
+#include "esp32s2/ulp.h"
 #endif
 #endif
+
 
 #ifndef CONFIG_IDF_TARGET_ESP32S2 // No BT in ESP32-S2
 
