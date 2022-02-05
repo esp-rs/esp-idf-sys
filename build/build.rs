@@ -162,7 +162,6 @@ impl bindgen::callbacks::ParseCallbacks for MbedtlsParseCallbacks {
             original_item_name
                 .trim_start_matches("mbedtls_")
                 .trim_start_matches("MBEDTLS_")
-                .trim_start_matches("KW_")
                 .to_owned(),
         )
     }

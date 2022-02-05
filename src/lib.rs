@@ -129,6 +129,8 @@ pub mod types {
     pub type ptrdiff_t = isize;
 }
 
+pub const ECDSA_MAX_LEN: usize = 121; // TODO why is this not being generated in bindings.rs???
+
 // pub mod c_types {
 //     pub use crate::types::*;
 //     pub use crate::types::raw_types::*;
