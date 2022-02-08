@@ -172,7 +172,6 @@
 #endif
 #endif
 
-
 #ifndef CONFIG_IDF_TARGET_ESP32S2 // No BT in ESP32-S2
 
 // If a custom sdkconfig file has been used to enable Bluetooth support,
@@ -202,3 +201,5 @@
 #endif
 
 #endif
+
+#include "mdns.h"
