@@ -4,6 +4,7 @@ compile_error!("One of the features `pio` or `native` must be selected.");
 use std::env;
 use std::iter::once;
 use std::path::PathBuf;
+use std::collections::{HashMap, HashSet};
 
 use ::bindgen::callbacks::{IntKind, ParseCallbacks};
 use anyhow::*;
@@ -27,19 +28,66 @@ mod build_driver;
 struct BindgenCallbacks;
 
 impl ParseCallbacks for BindgenCallbacks {
-    fn int_macro(&self, name: &str, _value: i64) -> Option<IntKind> {
-        // Make sure the ESP_ERR_*, ESP_OK and ESP_FAIL macros are all i32.
-        const PREFIX: &str = "ESP_";
-        const SUFFIX: &str = "ERR_";
-        const SUFFIX_SPECIAL: [&str; 2] = ["OK", "FAIL"];
+    fn item_name(&self, original_item_name: &str) -> Option<String> {
+        if original_item_name == "mbedtls_time_t" {
+            // TODO better fix for this
+            return None;
+        }
+        Some(
+            original_item_name
+                .trim_start_matches("mbedtls_")
+                .trim_start_matches("MBEDTLS_")
+                .to_owned(),
+        )
+    }
 
-        let name = name.strip_prefix(PREFIX)?;
-        if name.starts_with(SUFFIX) || SUFFIX_SPECIAL.iter().any(|&s| name == s) {
-            Some(IntKind::I32)
+    fn enum_variant_name(
+        &self,
+        _enum_name: Option<&str>,
+        original_variant_name: &str,
+        _variant_value: ::bindgen::callbacks::EnumVariantValue,
+    ) -> Option<String> {
+        self.item_name(original_variant_name)
+    }
+
+    // fn int_macro(&self, name: &str, value: i64) -> Option<IntKind> {
+    //     // Make sure the ESP_ERR_*, ESP_OK and ESP_FAIL macros are all i32.
+    //     const PREFIX: &str = "ESP_";
+    //     const SUFFIX: &str = "ERR_";
+    //     const SUFFIX_SPECIAL: [&str; 2] = ["OK", "FAIL"];
+
+    //     let name = name.strip_prefix(PREFIX)?;
+
+    //     // if name.starts_with("mbedtls") || name.starts_with("MBEDTLS") {
+    //         // TODO remove this? changes types to c_int etc, maybe we should only do this for mbedtls types?
+    //         if value < (i32::MIN as i64) || value > (i32::MAX as i64) {
+    //             Some(::bindgen::callbacks::IntKind::LongLong)
+    //         } else {
+    //             Some(::bindgen::callbacks::IntKind::Int)
+    //         }
+    //     // } else if name.starts_with(SUFFIX) || SUFFIX_SPECIAL.iter().any(|&s| name == s) {
+    //     //     Some(IntKind::I32)
+    //     // } else {
+    //     //     None
+    //     // }
+    // }
+
+    fn int_macro(&self, _name: &str, value: i64) -> Option<IntKind> {
+        // TODO remove this? changes types to c_int etc, maybe we should only do this for mbedtls types?
+        if value < (i32::MIN as i64) || value > (i32::MAX as i64) {
+            Some(IntKind::LongLong)
         } else {
-            None
+            Some(IntKind::Int)
         }
     }
+
+    // fn blocklisted_type_implements_trait(&self, _name: &str, derive_trait: bindgen::callbacks::DeriveTrait) -> Option<bindgen::callbacks::ImplementsTrait> {
+    //     if derive_trait == bindgen::callbacks::DeriveTrait::Default {
+    //         Some(bindgen::callbacks::ImplementsTrait::Manually)
+    //     } else {
+    //         Some(bindgen::callbacks::ImplementsTrait::Yes)
+    //     }
+    // }
 }
 
 fn main() -> anyhow::Result<()> {
@@ -117,7 +165,7 @@ fn main() -> anyhow::Result<()> {
             .join(",")
     );
 
-    let bindings_file = embindgen::run(
+    let bindings_file = bindgen::run(
         build_output
             .bindgen
             .builder()?
@@ -126,7 +174,6 @@ fn main() -> anyhow::Result<()> {
             .header(header_file.try_to_str()?)
             .blocklist_function("strtold")
             .blocklist_function("_strtold_r")
-            .parse_callbacks(Box::new(MbedtlsParseCallbacks))
             .size_t_is_usize(true) /* mbedtls requires size_t to be usize, default def is u32. */
             .prepend_enum_name(false)
             .translate_enum_integer_types(true)
@@ -181,48 +228,4 @@ fn main() -> anyhow::Result<()> {
     }
 
     Ok(())
-}
-
-#[derive(Debug)]
-struct MbedtlsParseCallbacks;
-
-impl bindgen::callbacks::ParseCallbacks for MbedtlsParseCallbacks {
-    fn item_name(&self, original_item_name: &str) -> Option<String> {
-        if original_item_name == "mbedtls_time_t" {
-            // TODO better fix for this
-            return None;
-        }
-        Some(
-            original_item_name
-                .trim_start_matches("mbedtls_")
-                .trim_start_matches("MBEDTLS_")
-                .to_owned(),
-        )
-    }
-
-    fn enum_variant_name(
-        &self,
-        _enum_name: Option<&str>,
-        original_variant_name: &str,
-        _variant_value: bindgen::callbacks::EnumVariantValue,
-    ) -> Option<String> {
-        self.item_name(original_variant_name)
-    }
-
-    fn int_macro(&self, _name: &str, value: i64) -> Option<bindgen::callbacks::IntKind> {
-        // TODO remove this? changes types to c_int etc, maybe we should only do this for mbedtls types?
-        if value < (i32::MIN as i64) || value > (i32::MAX as i64) {
-            Some(bindgen::callbacks::IntKind::LongLong)
-        } else {
-            Some(bindgen::callbacks::IntKind::Int)
-        }
-    }
-
-    // fn blocklisted_type_implements_trait(&self, _name: &str, derive_trait: bindgen::callbacks::DeriveTrait) -> Option<bindgen::callbacks::ImplementsTrait> {
-    //     if derive_trait == bindgen::callbacks::DeriveTrait::Default {
-    //         Some(bindgen::callbacks::ImplementsTrait::Manually)
-    //     } else {
-    //         Some(bindgen::callbacks::ImplementsTrait::Yes)
-    //     }
-    // }
 }
