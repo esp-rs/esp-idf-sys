@@ -13,6 +13,7 @@ pub const ESP_IDF_TOOLS_INSTALL_DIR_VAR: &str = "ESP_IDF_TOOLS_INSTALL_DIR";
 pub const ESP_IDF_GLOB_VAR_PREFIX: &str = "ESP_IDF_GLOB";
 pub const ESP_IDF_SDKCONFIG_DEFAULTS_VAR: &str = "ESP_IDF_SDKCONFIG_DEFAULTS";
 pub const ESP_IDF_SDKCONFIG_VAR: &str = "ESP_IDF_SDKCONFIG";
+pub const ESP_IDF_EXTRA_INCLUDES_VAR: &str = "ESP_IDF_EXTRA_INCLUDES";
 pub const MCU_VAR: &str = "MCU";
 
 pub const SDKCONFIG_FILE: &str = "sdkconfig";

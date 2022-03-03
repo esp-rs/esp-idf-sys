@@ -2,6 +2,8 @@
 
 use std::convert::TryFrom;
 use std::ffi::OsString;
+use std::fs::File;
+use std::io::Write;
 use std::iter;
 use std::path::{Path, PathBuf};
 use std::str::FromStr;
@@ -186,6 +188,27 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
         manifest_dir.join(path_buf!("resources", "cmake_project", "main.c")),
         &out_dir,
     )?;
+
+    // TODO get this from ENV
+    // TODO support globs? 
+    let extra_components = [
+        "/home/mabez/development/c/esp-rainmaker/components/esp_rainmaker/",
+        "/home/mabez/development/c/esp-rainmaker/components/rmaker_common/",
+        "/home/mabez/development/c/esp-rainmaker/components/button/",
+        "/home/mabez/development/c/esp-rainmaker/components/esp_schedule/",
+        "/home/mabez/development/c/esp-rainmaker/components/json_parser/",
+        "/home/mabez/development/c/esp-rainmaker/components/json_generator/",
+        "/home/mabez/development/c/esp-rainmaker/components/ws2812_led/",
+        "/home/mabez/development/c/esp-rainmaker/components/qrcode/",
+        "/home/mabez/development/c/esp-rainmaker/components/esp-insights/components/esp_insights",
+        "/home/mabez/development/c/esp-rainmaker/components/esp-insights/components/esp_diagnostics",
+        "/home/mabez/development/c/esp-rainmaker/components/esp-insights/components/rtc_store",
+    ];
+
+    let mut extra_componentsf = File::create(out_dir.join("custom-components.cmake"))?;
+    for c in extra_components {
+        extra_componentsf.write_fmt(format_args!("idf_build_component({})\n", c))?;
+    }
 
     // Copy additional globbed files specified by user env variables
     for file in build::tracked_env_globs_iter(ESP_IDF_GLOB_VAR_PREFIX)? {

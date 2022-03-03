@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.20)
 include($ENV{IDF_PATH}/tools/cmake/idf.cmake)
 project(libespidf C)
 
+include(custom-components.cmake)
+
 idf_build_process($ENV{IDF_TARGET} SDKCONFIG $ENV{SDKCONFIG} SDKCONFIG_DEFAULTS $ENV{SDKCONFIG_DEFAULTS})
 idf_build_get_property(aliases BUILD_COMPONENT_ALIASES)
 

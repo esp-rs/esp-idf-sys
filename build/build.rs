@@ -2,6 +2,9 @@
 compile_error!("One of the features `pio` or `native` must be selected.");
 
 use std::env;
+use std::fs::File;
+use std::io::Write;
+use std::result::Result::Ok;
 use std::iter::once;
 use std::path::PathBuf;
 
@@ -88,6 +91,18 @@ fn main() -> anyhow::Result<()> {
 
     cargo::track_file(&header_file);
 
+    let extra_includes_path = path_buf![cargo::out_dir(), "extra-includes.h"];
+    let mut extra_includesf = File::create(&extra_includes_path)?;
+    // TODO this can't be just one variable, else we can't support multiple components
+    match env::var(ESP_IDF_EXTRA_INCLUDES_VAR) {
+        Ok(extra) => {
+            for line in extra.split(";") {
+                extra_includesf.write_fmt(format_args!("#include {}\n", line))?;
+            }
+        }
+        _ => (),
+    }
+
     let bindings_file = bindgen::run(
         build_output
             .bindgen
@@ -95,6 +110,7 @@ fn main() -> anyhow::Result<()> {
             .parse_callbacks(Box::new(BindgenCallbacks))
             .ctypes_prefix("c_types")
             .header(header_file.try_to_str()?)
+            .header(extra_includes_path.try_to_str()?)
             .blocklist_function("strtold")
             .blocklist_function("_strtold_r")
             .blocklist_function("v.*printf")
