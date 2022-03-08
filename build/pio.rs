@@ -42,7 +42,7 @@ pub fn build() -> Result<EspIdfBuildOutput> {
             println!(
                 "cargo:info=PlatformIO executable detected on path, however user has overriden with `{}` via `{}`", 
                 install_location.as_ref().unwrap(),
-                InstallLocation::get_env_var_name());
+                ESP_IDF_TOOLS_INSTALL_DIR_VAR);
         }
 
         let pio = match install_location {
@@ -50,7 +50,7 @@ pub fn build() -> Result<EspIdfBuildOutput> {
                 pio_from_env.map(Result::Ok).unwrap_or_else(|| bail!(
                     "Install location is configured to `{}` via `{}`, however no PlatformIO executable was detected on path", 
                     InstallLocation::FromPath,
-                    InstallLocation::get_env_var_name()))?
+                    ESP_IDF_TOOLS_INSTALL_DIR_VAR))?
             },
             install_location => {
                 let install_location = install_location

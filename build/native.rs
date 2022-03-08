@@ -121,7 +121,7 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
         bail!(
             "ESP-IDF tooling detected on path, however user has overriden with `{}` via `{}`",
             install_location.unwrap(),
-            InstallLocation::get_env_var_name()
+            ESP_IDF_TOOLS_INSTALL_DIR_VAR
         );
     }
 
@@ -131,7 +131,7 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
             Some(install_location) => bail!(
                 "Install location is configured to `{}` via `{}`, however there is ESP-IDF tooling detected on path", 
                 install_location,
-                InstallLocation::get_env_var_name()),
+                ESP_IDF_TOOLS_INSTALL_DIR_VAR),
         }
     } else {
         let install_location = install_location
@@ -142,7 +142,7 @@ fn build_cargo_first() -> Result<EspIdfBuildOutput> {
             bail!(
                 "Install location is configured to `{}` via `{}`, however no ESP-IDF tooling was detected on path", 
                 InstallLocation::FromPath,
-                InstallLocation::get_env_var_name());
+                ESP_IDF_TOOLS_INSTALL_DIR_VAR);
         }
 
         let cmake_tool = espidf::Tools::cmake()?;

@@ -185,20 +185,12 @@ pub enum InstallLocation {
 }
 
 impl InstallLocation {
-    pub fn get_env_var_name() -> &'static str {
-        ESP_IDF_TOOLS_INSTALL_DIR_VAR
-    }
-
     pub fn get(builder_name: impl AsRef<str>) -> Result<Option<InstallLocation>> {
-        let location = match env::var(Self::get_env_var_name()) {
+        let location = match env::var(ESP_IDF_TOOLS_INSTALL_DIR_VAR) {
             Err(env::VarError::NotPresent) => None,
             e => Some(e?),
         };
 
-        Self::parse(location.as_deref(), builder_name)
-    }
-
-    pub fn parse(location: Option<&str>, builder_name: impl AsRef<str>) -> Result<Option<Self>> {
         if let Some(location) = location {
             let location = match location.to_lowercase().as_str() {
                 "global" => Self::Global,
