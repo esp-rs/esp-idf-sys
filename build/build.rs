@@ -5,7 +5,10 @@ use std::env;
 use std::iter::once;
 use std::path::PathBuf;
 
-use ::bindgen::callbacks::{IntKind, ParseCallbacks};
+use ::bindgen::{
+    callbacks::{IntKind, ParseCallbacks},
+    EnumVariation,
+};
 use anyhow::*;
 use common::*;
 use embuild::utils::OsStrExt;
@@ -95,6 +98,8 @@ fn main() -> anyhow::Result<()> {
             .parse_callbacks(Box::new(BindgenCallbacks))
             .ctypes_prefix("c_types")
             .header(header_file.try_to_str()?)
+            .default_enum_style(EnumVariation::Rust { non_exhaustive: false } )
+            .no_default("wifi_init_config_t")
             .blocklist_function("strtold")
             .blocklist_function("_strtold_r")
             .blocklist_function("v.*printf")
