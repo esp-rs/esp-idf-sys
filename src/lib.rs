@@ -5,10 +5,12 @@
 )]
 
 pub use bindings::*;
+pub use defaults::*;
 pub use error::*;
 pub use patches::PatchesRef;
 
 mod alloc;
+mod defaults;
 mod error;
 mod panic;
 mod patches;
