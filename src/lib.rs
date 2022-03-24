@@ -73,7 +73,5 @@ pub mod c_types {
 #[allow(non_snake_case)]
 #[allow(improper_ctypes)] // TODO: For now, as 5.0 spits out tons of these
 mod bindings {
-    use super::c_types;
-
     include!(env!("EMBUILD_GENERATED_BINDINGS_FILE"));
 }

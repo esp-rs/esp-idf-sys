@@ -32,16 +32,24 @@ struct BindgenCallbacks;
 impl ParseCallbacks for BindgenCallbacks {
     fn int_macro(&self, name: &str, _value: i64) -> Option<IntKind> {
         // Make sure the ESP_ERR_*, ESP_OK and ESP_FAIL macros are all i32.
-        const PREFIX: &str = "ESP_";
-        const SUFFIX: &str = "ERR_";
-        const SUFFIX_SPECIAL: [&str; 2] = ["OK", "FAIL"];
-
-        let name = name.strip_prefix(PREFIX)?;
-        if name.starts_with(SUFFIX) || SUFFIX_SPECIAL.iter().any(|&s| name == s) {
-            Some(IntKind::I32)
-        } else {
-            None
+        if let Some(name) = name.strip_prefix("ESP_") {
+            if name == "OK" || name == "FAIL" || name.starts_with("ERR_") {
+                return Some(IntKind::I32);
+            }
         }
+
+        None
+    }
+
+    fn add_derives(&self, name: &str) -> Vec<String> {
+        let mut derives = vec![];
+
+        // Make sure log levels can be compared.
+        if name == "esp_log_level_t" {
+            derives.push("PartialOrd".into());
+        }
+
+        derives
     }
 }
 
@@ -96,9 +104,12 @@ fn main() -> anyhow::Result<()> {
             .bindgen
             .builder()?
             .parse_callbacks(Box::new(BindgenCallbacks))
-            .ctypes_prefix("c_types")
+            .ctypes_prefix("crate::c_types")
             .header(header_file.try_to_str()?)
-            .default_enum_style(EnumVariation::Rust { non_exhaustive: false } )
+            .default_enum_style(EnumVariation::NewType { is_bitfield: false })
+            .constified_enum_module("flags")
+            .constified_enum_module("http_errno")
+            .bitfield_enum(r"esp_netif_flags(_t)?")
             .no_default("wifi_init_config_t")
             .blocklist_function("strtold")
             .blocklist_function("_strtold_r")
