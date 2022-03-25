@@ -31,20 +31,6 @@ impl Default for wifi_init_config_t {
 
 impl Default for esp_log_level_t {
     fn default() -> Self {
-        let default_log_level = esp_log_level_t(CONFIG_LOG_DEFAULT_LEVEL);
-
-        if default_log_level >= esp_log_level_t::ESP_LOG_VERBOSE {
-            esp_log_level_t::ESP_LOG_VERBOSE
-        } else if default_log_level >= esp_log_level_t::ESP_LOG_DEBUG {
-            esp_log_level_t::ESP_LOG_DEBUG
-        } else if default_log_level >= esp_log_level_t::ESP_LOG_INFO {
-            esp_log_level_t::ESP_LOG_INFO
-        } else if default_log_level >= esp_log_level_t::ESP_LOG_WARN {
-            esp_log_level_t::ESP_LOG_WARN
-        } else if default_log_level >= esp_log_level_t::ESP_LOG_ERROR {
-            esp_log_level_t::ESP_LOG_ERROR
-        } else {
-            esp_log_level_t::ESP_LOG_NONE
-        }
+        esp_log_level_t(CONFIG_LOG_DEFAULT_LEVEL)
     }
 }
