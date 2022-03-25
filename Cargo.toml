@@ -37,3 +37,6 @@ anyhow = "1"
 strum = { version = "0.23", features = ["derive"], optional = true }
 regex = "1.5"
 bindgen = "0.59"
+
+[patch.crates-io]
+ring = { git = "https://github.com/gear-tech/ring.git", branch = "v0.16.20-fix-nightly" }
