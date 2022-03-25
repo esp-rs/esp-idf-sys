@@ -62,21 +62,21 @@ impl fmt::Display for EspError {
 
 #[macro_export]
 macro_rules! esp {
-    ($err:expr) => {{
+    ($err:expr $(,)?) => {{
         esp_idf_sys::EspError::convert($err as esp_idf_sys::esp_err_t)
     }};
 }
 
 #[macro_export]
 macro_rules! esp_result {
-    ($err:expr, $value:expr) => {{
+    ($err:expr, $value:expr $(,)?) => {{
         esp_idf_sys::EspError::check_and_return($err as esp_idf_sys::esp_err_t, $value)
     }};
 }
 
 #[macro_export]
 macro_rules! esp_nofail {
-    ($err:expr) => {{
+    ($err:expr $(,)?) => {{
         if let Some(error) = esp_idf_sys::EspError::from($err as esp_idf_sys::esp_err_t) {
             error.panic();
         }
