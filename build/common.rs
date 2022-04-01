@@ -53,6 +53,7 @@ const ALL_COMPONENTS: &[&str] = &[
     "comp_spiffs_enabled",
     "comp_vfs_enabled",
     "comp_esp_wifi_provisioning_enabled",
+    "comp_esp_ws_client_enabled",
 ];
 
 pub struct EspIdfBuildOutput {

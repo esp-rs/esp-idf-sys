@@ -62,6 +62,10 @@
 #endif
 #endif
 
+#ifdef ESP_IDF_COMP_ESP_WS_CLIENT_ENABLED
+#include "esp_websocket_client.h"
+#endif
+
 #ifdef ESP_IDF_COMP_VFS_ENABLED
 #include "esp_vfs.h"
 #include "esp_vfs_cdcacm.h"
