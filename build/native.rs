@@ -17,18 +17,9 @@ use embuild::{bindgen, build, cargo, cmake, espidf, git, kconfig, path_buf};
 use strum::{Display, EnumString, IntoEnumIterator};
 
 use super::common::{
-    self,
-    list_specific_sdkconfigs,
-    workspace_dir,
-    EspIdfBuildOutput,
-    EspIdfComponents,
-    InstallDir,
-    ESP_IDF_GLOB_VAR_PREFIX,
-    ESP_IDF_SDKCONFIG_DEFAULTS_VAR,
-    ESP_IDF_SDKCONFIG_VAR,
-    ESP_IDF_TOOLS_INSTALL_DIR_VAR,
-    MCU_VAR,
-    V_4_3_2_PATCHES,
+    self, list_specific_sdkconfigs, workspace_dir, EspIdfBuildOutput, EspIdfComponents, InstallDir,
+    ESP_IDF_GLOB_VAR_PREFIX, ESP_IDF_SDKCONFIG_DEFAULTS_VAR, ESP_IDF_SDKCONFIG_VAR,
+    ESP_IDF_TOOLS_INSTALL_DIR_VAR, MCU_VAR, V_4_3_2_PATCHES,
 };
 use crate::common::{SDKCONFIG_DEFAULTS_FILE, SDKCONFIG_FILE};
 
