@@ -30,43 +30,50 @@ pub fn build() -> Result<EspIdfBuildOutput> {
         let workspace_dir = workspace_dir()?;
         let profile = build_profile();
 
-        let pio_from_env = pio::Pio::try_from_env()?;
+        // Get the install dir from the $ESP_IDF_TOOLS_INSTALL_DIR, if unset use
+        // "workspace" and allow platformio from the environment.
+        let (install_dir, allow_from_env) = InstallDir::from_env_or("workspace", "platformio")?;
+        // Pio must come from the environment if $ESP_IDF_TOOLS_INSTALL_DIR == "fromenv".
+        let require_from_env = install_dir.is_from_env();
+        let maybe_from_env = require_from_env || allow_from_env;
 
-        let install_location = InstallLocation::get("platformio")?;
+        let install = |install_dir: &InstallDir| -> Result<pio::Pio> {
+            let install_dir = install_dir.path().map(ToOwned::to_owned);
 
-        if pio_from_env.is_some()
-            && install_location.is_some()
-            && !matches!(install_location, Some(InstallLocation::FromPath))
-        {
-            println!(
-                "cargo:info=PlatformIO executable detected on path, however user has overriden with `{}` via `{}`", 
-                install_location.as_ref().unwrap(),
-                ESP_IDF_TOOLS_INSTALL_DIR_VAR);
-        }
+            if let Some(install_dir) = &install_dir {
+                // Workaround an issue in embuild until it is fixed in the next version
+                fs::create_dir_all(install_dir)?;
+            }
 
-        let pio = match install_location {
-            Some(InstallLocation::FromPath) => {
-                pio_from_env.map(Result::Ok).unwrap_or_else(|| bail!(
-                    "Install location is configured to `{}` via `{}`, however no PlatformIO executable was detected on path", 
-                    InstallLocation::FromPath,
-                    ESP_IDF_TOOLS_INSTALL_DIR_VAR))?
+            pio::Pio::install(
+                install_dir,
+                pio::LogLevel::Standard,
+                false,
+            )
+        };
+        
+        let pio = match (pio::Pio::try_from_env(), maybe_from_env) {
+            (Some(pio), true) => {
+                eprintln!(
+                    "Using platformio from environment at '{}'", 
+                    pio.platformio_exe.display()
+                );
+
+                pio
             },
-            install_location => {
-                let install_location = install_location
-                    .map(Result::Ok)
-                    .unwrap_or_else(|| InstallLocation::new_workspace("platformio"))?;
-
-                if let Some(install_dir) = install_location.path() {
-                    // Workaround an issue in embuild until it is fixed in the next version
-                    fs::create_dir_all(install_dir)?;
-                }
-
-                pio::Pio::install(
-                    install_location.path().map(|p| p.to_owned()),
-                    pio::LogLevel::Standard,
-                    false,
-                )?
+            (Some(_), false) => {
+                    cargo::print_warning(format_args!(
+                        "Ignoring platformio in environment: ${ESP_IDF_TOOLS_INSTALL_DIR_VAR} != {}", InstallDir::FromEnv
+                    ));
+                    install(&install_dir)?
             },
+            (None, true) if require_from_env => {
+                bail!("platformio not found in environment ($PATH) \
+                       but required by ${ESP_IDF_TOOLS_INSTALL_DIR_VAR} == {install_dir}");
+            }
+            (None, _) => {
+                install(&install_dir)?
+            }
         };
 
         let resolution = pio::Resolver::new(pio.clone())
@@ -131,6 +138,7 @@ pub fn build() -> Result<EspIdfBuildOutput> {
 
         let manifest_dir = PathBuf::from(env::var("CARGO_MANIFEST_DIR")?);
         for patch in V_4_3_2_PATCHES {
+            // TODO: fix patches not applying
             builder.platform_package_patch(manifest_dir.join(patch), path_buf!["framework-espidf"]);
         }
 
