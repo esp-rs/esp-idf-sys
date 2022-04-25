@@ -45,35 +45,32 @@ pub fn build() -> Result<EspIdfBuildOutput> {
                 fs::create_dir_all(install_dir)?;
             }
 
-            pio::Pio::install(
-                install_dir,
-                pio::LogLevel::Standard,
-                false,
-            )
+            pio::Pio::install(install_dir, pio::LogLevel::Standard, false)
         };
-        
+
         let pio = match (pio::Pio::try_from_env(), maybe_from_env) {
             (Some(pio), true) => {
                 eprintln!(
-                    "Using platformio from environment at '{}'", 
+                    "Using platformio from environment at '{}'",
                     pio.platformio_exe.display()
                 );
 
                 pio
-            },
-            (Some(_), false) => {
-                    cargo::print_warning(format_args!(
-                        "Ignoring platformio in environment: ${ESP_IDF_TOOLS_INSTALL_DIR_VAR} != {}", InstallDir::FromEnv
-                    ));
-                    install(&install_dir)?
-            },
-            (None, true) if require_from_env => {
-                bail!("platformio not found in environment ($PATH) \
-                       but required by ${ESP_IDF_TOOLS_INSTALL_DIR_VAR} == {install_dir}");
             }
-            (None, _) => {
+            (Some(_), false) => {
+                cargo::print_warning(format_args!(
+                    "Ignoring platformio in environment: ${ESP_IDF_TOOLS_INSTALL_DIR_VAR} != {}",
+                    InstallDir::FromEnv
+                ));
                 install(&install_dir)?
             }
+            (None, true) if require_from_env => {
+                bail!(
+                    "platformio not found in environment ($PATH) \
+                       but required by ${ESP_IDF_TOOLS_INSTALL_DIR_VAR} == {install_dir}"
+                );
+            }
+            (None, _) => install(&install_dir)?,
         };
 
         let resolution = pio::Resolver::new(pio.clone())
