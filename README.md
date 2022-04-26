@@ -117,7 +117,7 @@ The following environment variables are used by the build script:
     - `global` - the tooling will be installed/used in its standard directory (`~/.platformio` for PlatformIO, and `~./espressif` for the native ESP-IDF toolset);
     - `custom:<dir>` -  the tooling will be installed/used in the directory specified by `<dir>`. If this directory is a relative location, it is assumed to be 
       relative to the crate's workspace dir;
-    - `fromenv` - use build framework from the environment 
+    - `fromenv` - use the build framework from the environment 
         - *native* builder: use activated esp-idf environment (see esp-idf docs
       [unix](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/get-started/linux-macos-setup.html#step-4-set-up-the-environment-variables)
       /
@@ -135,7 +135,7 @@ The following environment variables are used by the build script:
   
 - `IDF_PATH` (*native* builder only):
   A path to a user-provided local clone of the [`esp-idf`](https://github.com/espressif/esp-idf),
-  that will be used instead of the one donwloaded by the build script.
+  that will be used instead of the one downloaded by the build script.
 
 - `ESP_IDF_VERSION` (*native* builder only):
 
