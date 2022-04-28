@@ -30,6 +30,7 @@ const TOOLS_WORKSPACE_INSTALL_DIR: &str = ".embuild";
 const ALL_COMPONENTS: &[&str] = &[
     // TODO: Put all IDF components here
     "comp_app_update_enabled",
+    "comp_bootloader_support_enabled",
     "comp_console_enabled",
     "comp_esp_adc_cal_enabled",
     "comp_esp_eth_enabled",

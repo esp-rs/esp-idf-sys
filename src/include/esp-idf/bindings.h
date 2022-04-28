@@ -241,4 +241,20 @@
 #include "host/util/util.h"
 #endif
 
+#ifdef ESP_IDF_COMP_BOOTLOADER_SUPPORT_ENABLED
+#include "bootloader_common.h"
+#include "bootloader_clock.h"
+#include "bootloader_flash.h"
+#include "bootloader_flash_config.h"
+#include "bootloader_mem.h"
+#include "bootloader_random.h"
+#include "bootloader_util.h"
+#include "esp_app_format.h"
+#include "esp_flash_data_types.h"
+#include "esp_flash_encrypt.h"
+#include "esp_flash_partitions.h"
+#include "esp_image_format.h"
+#include "esp_secure_boot.h"
+#endif
+
 #endif
