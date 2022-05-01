@@ -62,7 +62,7 @@
 #endif
 #endif
 
-#ifdef ESP_IDF_COMP_ESP_WS_CLIENT_ENABLED
+#ifdef ESP_IDF_COMP_ESP_WEBSOCKET_CLIENT_ENABLED
 #include "esp_websocket_client.h"
 #endif
 
