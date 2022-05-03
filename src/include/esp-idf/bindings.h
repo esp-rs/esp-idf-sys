@@ -5,7 +5,6 @@
 #endif
 
 //#include "esp_crc.h"
-#include "esp_efuse.h"
 #include "esp_log.h"
 #include "esp_debug_helpers.h"
 
@@ -20,6 +19,10 @@
 #include "esp_console.h"
 #include "linenoise/linenoise.h"
 #include "argtable3/argtable3.h"
+#endif
+
+#ifdef ESP_IDF_COMP_EFUSE_ENABLED
+#include "esp_efuse.h"
 #endif
 
 #ifdef ESP_IDF_COMP_ESP_PM_ENABLED
@@ -91,17 +94,20 @@
 
 #endif
 
+#ifdef ESP_IDF_COMP_LWIP_ENABLED
 #include "lwip/lwip_napt.h"
 #include "esp_sntp.h"
-
 #include "ping/ping_sock.h"
+#endif
+
+#ifdef ESP_IDF_COMP_MBEDTLS_ENABLED
+#ifdef CONFIG_MBEDTLS_CERTIFICATE_BUNDLE
+#include "esp_crt_bundle.h"
+#endif
+#endif
 
 #ifdef ESP_IDF_COMP_ESP_TLS_ENABLED
 #include "esp_tls.h"
-
-#ifdef CONFIG_ESP_TLS_USING_MBEDTLS
-#include "esp_crt_bundle.h"
-#endif
 #endif
 
 #ifdef ESP_IDF_COMP_APP_UPDATE_ENABLED
@@ -114,6 +120,10 @@
 
 #ifdef ESP_IDF_COMP_ESP_HTTP_SERVER_ENABLED
 #include "esp_http_server.h"
+#endif
+
+#ifdef ESP_IDF_COMP_ESP_WEBSOCKET_CLIENT_ENABLED
+#include "esp_websocket_client.h"
 #endif
 
 #ifdef ESP_IDF_COMP_MDNS_ENABLED
@@ -138,8 +148,10 @@
 #ifdef ESP_IDF_COMP_SOC_ENABLED
 // TODO: Include all XXX_periph.h headers here
 #include "soc/gpio_periph.h"
+#include "soc/rtc_periph.h"
 #endif
 
+#ifdef ESP_IDF_COMP_DRIVER_ENABLED
 #include "driver/adc.h"
 #include "driver/twai.h"
 #if !defined(CONFIG_IDF_TARGET_ESP32C3) && !defined(CONFIG_IDF_TARGET_ESP32S3)
@@ -176,6 +188,7 @@
 
 #include "driver/uart.h"
 #include "driver/uart_select.h"
+#endif
 
 #ifdef ESP_IDF_COMP_ESPCOREDUMP_ENABLED
 #include "esp_core_dump.h"
@@ -186,16 +199,32 @@
 #include "esp_serial_slave_link/essl_sdio.h"
 #endif
 
-#include "pthread.h"
-
 #ifdef ESP_IDF_COMP_PTHREAD_ENABLED
+#include "pthread.h"
 #include "esp_pthread.h"
 #endif
 
+#ifdef ESP_IDF_COMP_ULP_ENABLED
+#if (ESP_IDF_VERSION_MAJOR > 4)
+// ESP-IDF V5+
+#ifdef CONFIG_ULP_COPROC_ENABLED
+#if CONFIG_ULP_COPROC_TYPE_FSM
+#if CONFIG_IDF_TARGET_ESP32
+#include "esp32/ulp.h"
+#elif CONFIG_IDF_TARGET_ESP32S2
+#include "esp32s2/ulp.h"
+#elif CONFIG_IDF_TARGET_ESP32S3
+#include "esp32s3/ulp.h"
+#endif
+#else
+#include "ulp_riscv.h"
+#endif
+#endif
+#else
+// ESP-IDF V4.X
 #ifdef CONFIG_ESP32_ULP_COPROC_ENABLED
 #include "esp32/ulp.h"
 #endif
-
 #ifdef CONFIG_ESP32S2_ULP_COPROC_ENABLED
 #ifdef CONFIG_ESP32S2_ULP_COPROC_RISCV
 #include "esp32s2/ulp_riscv.h"
@@ -203,7 +232,6 @@
 #include "esp32s2/ulp.h"
 #endif
 #endif
-
 #ifdef CONFIG_ESP32S3_ULP_COPROC_ENABLED
 #ifdef CONFIG_ESP32S3_ULP_COPROC_RISCV
 #include "esp32s3/ulp_riscv.h"
@@ -211,7 +239,8 @@
 #include "esp32s2/ulp.h"
 #endif
 #endif
-
+#endif
+#endif
 
 #ifndef CONFIG_IDF_TARGET_ESP32S2 // No BT in ESP32-S2
 
