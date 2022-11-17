@@ -100,6 +100,7 @@ fn main() -> anyhow::Result<()> {
         Ok(bindgen
             .parse_callbacks(Box::new(BindgenCallbacks))
             .ctypes_prefix("c_types")
+            .derive_eq(true)
             .blocklist_function("strtold")
             .blocklist_function("_strtold_r")
             .blocklist_function("v.*printf")
