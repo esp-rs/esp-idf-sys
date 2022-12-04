@@ -23,6 +23,11 @@ panic_handler = []
 binstart = []
 libstart = []
 
+# by default esp-idf-sys includes driver/pulse_cnt.h when enabled driver/pcnt.h
+# will be included instead (only used when compiling esp-idf > 4, esp-idf 4 always
+# incudes driver/pcnt.h)
+pcnt4 = []
+
 # Use native `esp-idf` tooling to build the `esp-idf`
 native = ["embuild/cmake", "embuild/espidf"]
 # Backup: use `platformio` to build the `esp-idf`

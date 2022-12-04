@@ -181,9 +181,6 @@
 #else
 #include "driver/mcpwm.h"
 #endif
-#ifndef CONFIG_IDF_TARGET_ESP32C3
-#include "driver/pcnt.h"
-#endif
 #include "driver/periph_ctrl.h"
 #include "driver/rmt.h"
 #include "driver/rtc_cntl.h"

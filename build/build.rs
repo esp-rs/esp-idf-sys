@@ -92,7 +92,25 @@ fn main() -> anyhow::Result<()> {
         "bindings.h"
     ];
 
+    #[cfg(any(feature = "pcnt4", esp_idf_version_major = "4"))]
+    let pcnt_header_name = "bindings_pcnt.h";
+    #[cfg(not(any(feature = "pcnt4", esp_idf_version_major = "4")))]
+    let pcnt_header_name = "bindings_pulse_cnt.h";
+
+    let pcnt_header_file = path_buf![
+        &manifest_dir,
+        "src",
+        "include",
+        if mcu == "esp8266" {
+            "esp-8266-rtos-sdk"
+        } else {
+            "esp-idf"
+        },
+        pcnt_header_name
+    ];
+
     cargo::track_file(&header_file);
+    cargo::track_file(&pcnt_header_file);
 
     // Because we have multiple bindgen invocations and we can't clone a bindgen::Builder,
     // we have to set the options every time.
@@ -129,7 +147,7 @@ fn main() -> anyhow::Result<()> {
     };
 
     #[allow(unused_mut)]
-    let mut headers = vec![header_file];
+    let mut headers = vec![header_file, pcnt_header_file];
 
     #[cfg(all(feature = "native", not(feature = "pio")))]
     // Add additional headers from extra components.
