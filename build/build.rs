@@ -183,11 +183,10 @@ fn main() -> anyhow::Result<()> {
 
             writeln!(
                 &mut output_file,
-                "pub mod {} {{\
+                "pub mod {module_name} {{\
                      use crate::c_types;\
-                     {}\
-                 }}",
-                module_name, bindings
+                     {bindings}\
+                 }}"
             )?;
         }
         Ok(())
