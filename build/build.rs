@@ -92,10 +92,16 @@ fn main() -> anyhow::Result<()> {
         "bindings.h"
     ];
 
-    #[cfg(any(feature = "pcnt4", esp_idf_version_major = "4"))]
-    let pcnt_header_name = "bindings_pcnt.h";
-    #[cfg(not(any(feature = "pcnt4", esp_idf_version_major = "4")))]
-    let pcnt_header_name = "bindings_pulse_cnt.h";
+    // if the pulse_cnt.h header (proxy for esp-idf version > 4) is available then use the pcnt4 feature to
+    // choose between old and new implementations
+    let pulse_cnt_available = build_output.esp_idf.join("components/driver/include/driver/pulse_cnt.h").exists();
+    let pcnt_header_name = match pulse_cnt_available {
+        #[cfg(feature = "pcnt4")]
+        true => "bindings_pcnt.h",
+        #[cfg(not(feature = "pcnt4"))]
+        true => "bindings_pulse_cnt.h",
+        false => "bindings_pcnt.h",
+    };
 
     let pcnt_header_file = path_buf![
         &manifest_dir,
