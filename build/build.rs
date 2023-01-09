@@ -94,7 +94,10 @@ fn main() -> anyhow::Result<()> {
 
     // if the pulse_cnt.h header (proxy for esp-idf version > 4) is available then use the pcnt4 feature to
     // choose between old and new implementations
-    let pulse_cnt_available = build_output.esp_idf.join("components/driver/include/driver/pulse_cnt.h").exists();
+    let pulse_cnt_available = build_output
+        .esp_idf
+        .join("components/driver/include/driver/pulse_cnt.h")
+        .exists();
     let pcnt_header_name = match pulse_cnt_available {
         #[cfg(feature = "pcnt4")]
         true => "bindings_pcnt.h",
