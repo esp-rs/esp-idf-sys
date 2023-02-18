@@ -17,6 +17,9 @@
 
 #include "freertos/task_snapshot.h"
 
+#include "esp_spiram.h"
+#include "esp_himem.h"
+
 #if ESP_IDF_VERSION_MAJOR == 4
 #include "esp_int_wdt.h"
 #elif ESP_IDF_VERSION_MAJOR == 5
