@@ -18,7 +18,10 @@
 #include "freertos/task_snapshot.h"
 
 #include "esp_spiram.h"
+
+#if CONFIG_IDF_TARGET_ESP32
 #include "esp_himem.h"
+#endif // CONFIG_IDF_TARGET_ESP32
 
 #if ESP_IDF_VERSION_MAJOR == 4
 #include "esp_int_wdt.h"
