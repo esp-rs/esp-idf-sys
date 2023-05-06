@@ -20,6 +20,9 @@ pub enum Chip {
     /// RISC-V based single core
     #[strum(serialize = "esp32c3")]
     ESP32C3,
+    /// RISC-V based single core
+    #[strum(serialize = "esp32c6")]
+    ESP32C6,
 }
 
 impl Chip {
@@ -33,7 +36,7 @@ impl Chip {
                 return Ok(Chip::ESP32);
             }
         } else if rust_target_triple.starts_with("riscv32imc-esp") {
-            return Ok(Chip::ESP32C3);
+            bail!("Multiple possible targets, please define MCU in .cargo/config.toml -> [ENV] section")
         }
         bail!("Unsupported target '{}'", rust_target_triple)
     }
@@ -45,6 +48,7 @@ impl Chip {
             Self::ESP32S2 => "xtensa-esp32s2-elf",
             Self::ESP32S3 => "xtensa-esp32s3-elf",
             Self::ESP32C3 => "riscv32-esp-elf",
+            Self::ESP32C6 => "riscv32-esp-elf",
         }
     }
 
