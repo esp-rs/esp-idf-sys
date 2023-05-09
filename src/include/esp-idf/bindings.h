@@ -4,7 +4,7 @@
 #error Only ESP-IDF versions >= V4.3.2 are currently supported; if you are using the PIO build (the default one), wipe out your `.embuild` folder and try again with a clean rebuild
 #endif
 
-//#include "esp_crc.h"
+// #include "esp_crc.h"
 #include "esp_log.h"
 #include "esp_debug_helpers.h"
 
@@ -133,6 +133,7 @@
 #include "lwip/sockets.h"
 #include "esp_sntp.h"
 #include "ping/ping_sock.h"
+#include "lwip/apps/netbiosns.h"
 #endif
 
 #ifdef ESP_IDF_COMP_MBEDTLS_ENABLED
@@ -155,6 +156,10 @@
 
 #ifdef ESP_IDF_COMP_ESP_HTTP_CLIENT_ENABLED
 #include "esp_http_client.h"
+#endif
+
+#if defined(ESP_IDF_COMP_APP_UPDATE_ENABLED) && defined(ESP_IDF_COMP_ESP_HTTP_CLIENT_ENABLED)
+#include "esp_https_ota.h"
 #endif
 
 #ifdef ESP_IDF_COMP_ESP_HTTP_SERVER_ENABLED
