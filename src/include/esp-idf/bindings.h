@@ -212,6 +212,7 @@
 #include "driver/i2s_types.h"
 #include "driver/mcpwm_prelude.h"
 #else
+#include "driver/i2s.h"
 #include "driver/mcpwm.h"
 #endif
 #ifndef CONFIG_IDF_TARGET_ESP32C3
