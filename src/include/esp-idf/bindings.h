@@ -233,6 +233,11 @@
 #endif
 #include "driver/periph_ctrl.h"
 #include "driver/rmt.h"
+#if ESP_IDF_VERSION_MAJOR > 4
+#include "driver/rmt_encoder.h"
+#include "driver/rmt_tx.h"
+#include "driver/rmt_rx.h"
+#endif
 #include "driver/rtc_cntl.h"
 #include "driver/rtc_io.h"
 #ifdef CONFIG_IDF_TARGET_ESP32
