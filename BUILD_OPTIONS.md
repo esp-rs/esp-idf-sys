@@ -5,6 +5,7 @@
 - [sdkconfig](#sdkconfig)
 - [Build configuration](#build-configuration)
 - [Extra esp-idf components](#extra-esp-idf-components)
+- [IDF Component Registry components](#idf-component-registry-components)
 - [Conditional compilation](#conditional-compilation)
 - [ESP32-C6 Preliminary Support](#esp32-c6-preliminary-support)
 - [More info](#more-info)
@@ -356,6 +357,27 @@ and is equivalent to
 extra_components = [
     { component_dirs = [ "dir1", "dir2" ], bindings_header = "bindings.h", bindings_module = "name" }
 ]
+```
+
+## IDF Component Registry Components
+Since IDF 5.0, some components have been moved out of the IDF repository and moved into
+separate repositories. These components are registered with the [IDF Component Registry](https://components.espressif.com/).
+
+The native Cargo builder supports downloading and building these components. To enable this, simply replace the
+`component_dirs` field with `component_refs` and specify the component name and version:
+
+```toml
+[[package.metadata.esp-idf-sys.extra_components]]
+component_refs = [ { name = "NAMESPACE/NAME", version = "VERSION_REQ" } ]
+```
+
+The rest of the fields are the same as for [extra components](#extra-esp-idf-components).
+
+For example, to add a dependency the `1.2.x` version of the `espressif/mdns` component, 
+add the following to your `Cargo.toml`:
+```toml
+[[package.metadata.esp-idf-sys.extra_components]]
+component_refs = [ { name = "espressif/mdns", version = "1.2" } ]
 ```
 
 ## Conditional compilation

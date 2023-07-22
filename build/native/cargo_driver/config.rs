@@ -207,7 +207,7 @@ impl NativeConfig {
         ) -> impl Fn(ExtraComponent) -> Option<ExtraComponent> + '_ {
             // Filter empty extra components and set manifest path.
             |mut comp| {
-                if comp.bindings_header.is_none() && comp.component_dirs.is_empty() {
+                if comp.bindings_header.is_none() && (comp.component_dirs.is_empty() && comp.component_refs.is_empty()) {
                     return None;
                 }
                 comp.manifest_dir = package
@@ -293,6 +293,15 @@ pub struct ExtraComponent {
     #[serde(default, deserialize_with = "parse::value_or_list")]
     pub component_dirs: Vec<PathBuf>,
 
+    /// A list of versioned esp-idf components to include. E.g:
+    /// `[ { name = "espressif/mdns", version = "1.2" } ]`.
+    ///
+    /// The components will be downloaded from the Espressif component registry
+    /// (see `https://components.espressif.com/`) into the `.managed_components` folder and included
+    /// in the build as any other extra component.
+    #[serde(default, deserialize_with = "parse::value_or_list")]
+    pub component_refs: Vec<VersionedComponentDep>,
+
     /// The path to the C header to generate the bindings with. If this option is absent,
     /// **no** bindings will be generated.
     ///
@@ -321,6 +330,13 @@ pub struct ExtraComponent {
     /// that defined this [`ExtraComponent`].
     #[serde(skip)]
     pub manifest_dir: PathBuf,
+}
+
+#[derive(Debug, Deserialize, Clone, Default)]
+#[serde(default)]
+pub struct VersionedComponentDep {
+    pub name: String,
+    pub version: String,
 }
 
 mod parse {

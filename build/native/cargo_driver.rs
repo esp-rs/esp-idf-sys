@@ -12,7 +12,7 @@ use embuild::cmake::file_api::ObjKind;
 use embuild::espidf::{EspIdfOrigin, EspIdfRemote, FromEnvError};
 use embuild::fs::copy_file_if_different;
 use embuild::utils::{OsStrExt, PathExt};
-use embuild::{bindgen, build, cargo, cmake, espidf, git, kconfig, path_buf};
+use embuild::{bindgen, build, cargo, cmake, espidf, git, kconfig, path_buf, espcomp};
 
 use self::chip::Chip;
 use crate::common::{
@@ -332,8 +332,23 @@ pub fn build() -> Result<EspIdfBuildOutput> {
         )
     };
 
+    // Install all managed components
+    let mut comp_mgr = espcomp::EspComponentManager::new(
+        workspace_dir.join(".managed_components")
+    );
+    for dep in config.native.extra_components.iter()
+        .flat_map(|c| c.component_refs.clone()) {
+        comp_mgr = comp_mgr.with_component(dep.name.as_str(), dep.version.as_str())?;
+    }
+    let managed_component_dirs = comp_mgr.install()?;
+
+    let mut extra_component_paths = managed_component_dirs;
+
+    // Add other extra components dirs specified by the user.
+    extra_component_paths.append(&mut config.native.extra_component_dirs()?);
+
     // Get the directories of all extra components to build.
-    let extra_component_dirs = to_cmake_path_list(config.native.extra_component_dirs()?)?;
+    let extra_component_dirs = to_cmake_path_list(extra_component_paths)?;
 
     // `cmake::Config` automatically uses `<out_dir>/build` and there is no way to query
     // what build directory it sets, so we hard-code it.
