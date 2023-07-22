@@ -12,7 +12,7 @@ use embuild::cmake::file_api::ObjKind;
 use embuild::espidf::{EspIdfOrigin, EspIdfRemote, FromEnvError};
 use embuild::fs::copy_file_if_different;
 use embuild::utils::{OsStrExt, PathExt};
-use embuild::{bindgen, build, cargo, cmake, espidf, git, kconfig, path_buf, espcomp};
+use embuild::{bindgen, build, cargo, cmake, espidf, git, kconfig, path_buf};
 
 use self::chip::Chip;
 use crate::common::{
@@ -333,7 +333,7 @@ pub fn build() -> Result<EspIdfBuildOutput> {
     };
 
     // Install all managed components
-    let mut comp_mgr = espcomp::EspComponentManager::new(
+    let mut comp_mgr = espidf::components::IdfComponentManager::new(
         workspace_dir.join(".managed_components")
     );
     for dep in config.native.extra_components.iter()
