@@ -473,7 +473,7 @@ pub fn build() -> Result<EspIdfBuildOutput> {
     build_info.save_json(out_dir.join(espidf::BUILD_INFO_FILENAME))?;
 
     // Get all component names built by the esp-idf (cached by `CMakeLists.txt`).
-    let components = replies
+    let mut components = replies
         .get_cache()?
         .entries
         .iter()
@@ -486,6 +486,16 @@ pub fn build() -> Result<EspIdfBuildOutput> {
             c => Some(c.to_string()),
         })
         .collect::<Vec<_>>();
+
+    // Add components from the managed component manager so the correct cfgs are generated.
+    // Note: This ignores the namespace of the components and just uses the name.
+    // This makes the existing cfgs in the bindings configuration work, but will not work if there
+    // are future components with the same name in different namespaces.
+    // E.g. the component `mdns` is really in the `espressif` namespace, but we do not
+    // distinguish between this and a future `mdns` component in a different namespace.
+    for dep in comp_mgr.components.iter() {
+        components.push(dep.name.clone());
+    }
 
     eprintln!("Built components: {}", components.join(", "));
 
