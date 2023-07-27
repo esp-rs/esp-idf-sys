@@ -3,6 +3,7 @@ cmake_minimum_required(VERSION 3.20)
 set(IDF_TARGET $ENV{IDF_TARGET} CACHE STRING "IDF Build Target")
 
 include($ENV{IDF_PATH}/tools/cmake/project.cmake)
+idf_build_set_property(DEPENDENCIES_LOCK "$ENV{PROJECT_DIR}/components_${IDF_TARGET}.lock")
 
 project(libespidf)
 
