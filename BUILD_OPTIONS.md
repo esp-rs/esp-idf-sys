@@ -438,15 +438,15 @@ A remote component can be specified by:
 [package.metadata.esp-idf-sys.extra_components.0.remote_component]
 # The name of the remote component. Corrensponds to a key in the dependencies of
 # `idf_component.yml`.
-name = "component_name",
+name = "component_name"
 # The version of the remote component. Corresponds to the `version` field of the
 # `idf_component.yml`.
-version = "1.2",
+version = "1.2"
 # A git url that contains this remote component. Corresponds to the `git`
 # field of the `idf_component.yml`.
 #
 # This field is optional.
-git = "https://github.com/espressif/esp32-camera.git",
+git = "https://github.com/espressif/esp32-camera.git"
 # A path to the component.
 # Corresponds to the `path` field of the `idf_component.yml`.
 #
@@ -454,12 +454,12 @@ git = "https://github.com/espressif/esp32-camera.git",
 # `component_dirs` of extra components instead.
 #
 # This field is optional.
-path = "path/to/component",
+path = "path/to/component"
 # A url to a custom component registry. Corresponds to the `service_url`
 # field of the `idf_component.yml`.
 #
 # This field is optional.
-service_url = "https://componentregistry.company.com",
+service_url = "https://componentregistry.company.com"
 ```
 
 For example, to add a dependency the `1.2.x` version of the `espressif/mdns` component, 
