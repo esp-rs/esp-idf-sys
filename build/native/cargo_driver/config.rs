@@ -66,12 +66,21 @@ pub struct NativeConfig {
     /// Whether the esp-idf component manager (see [`RemoteComponent`]) should be on
     /// (`true`, `y`, `yes`, `on`) or off (`false`, `n`, `no`, `off`)
     #[serde(default, deserialize_with = "parse::toggle_setting")]
-    pub esp_idf_component_manager: Option<bool>,
+    esp_idf_component_manager: Option<bool>,
 }
 
 impl NativeConfig {
     pub fn try_from_env() -> Result<NativeConfig> {
         Ok(parse_from_env(&["extra_components"])?)
+    }
+
+    /// Get the value for the `IDF_COMPONENT_MANAGER` variable passed to cmake. The
+    /// component manager is on by default (if [`Self::esp_idf_component_manager`] is [`None`]).
+    pub fn idf_component_manager(&self) -> &'static str {
+        match self.esp_idf_component_manager {
+            Some(true) | None => "1",
+            Some(false) => "0",
+        }
     }
 
     /// Get the user-specified esp-idf version or [`DEFAULT_ESP_IDF_VERSION`] if unset.

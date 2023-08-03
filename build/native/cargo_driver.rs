@@ -279,11 +279,7 @@ pub fn build() -> Result<EspIdfBuildOutput> {
     } else {
         let _ = fs::remove_file(&idf_comp_yml);
     }
-    // Whether the esp-idf component manager should be on or off.
-    let idf_comp_manager_on = match config.native.esp_idf_component_manager {
-        Some(true) | None => "1",
-        Some(false) => "0",
-    };
+    let idf_comp_manager = config.native.idf_component_manager();
 
     // Copy additional globbed files specified by user env variables
     for file in build::tracked_env_globs_iter(ESP_IDF_GLOB_VAR_PREFIX)? {
@@ -426,7 +422,7 @@ pub fn build() -> Result<EspIdfBuildOutput> {
         .asmflag(asm_flags)
         .cflag(c_flags)
         .cxxflag(cxx_flags)
-        .env("IDF_COMPONENT_MANAGER", idf_comp_manager_on)
+        .env("IDF_COMPONENT_MANAGER", idf_comp_manager)
         .env("EXTRA_COMPONENT_DIRS", extra_component_dirs)
         .env("IDF_PATH", idf.repository.worktree())
         .env("PATH", &idf.exported_path)
