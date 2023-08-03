@@ -410,15 +410,18 @@ pub struct RemoteComponent {
     pub version: String,
     /// An optional git url that contains this remote component. Corresponds to the `git`
     /// field of the `idf_component.yml`.
+    #[serde(default)]
     pub git: Option<String>,
     /// An optional path to the component in case [`RemoteComponent::git`] is used.
     /// Corresponds to the `path` field of the `idf_component.yml`.
     ///
     /// Note: This should not be used for local components, use
     /// [`ExtraComponent::component_dirs`] instead.
+    #[serde(default)]
     pub path: Option<String>,
     /// An optional url to a custom component registry. Corresponds to the `service_url`
     /// field of the `idf_component.yml`.
+    #[serde(default)]
     pub service_url: Option<String>,
 }
 
