@@ -317,6 +317,16 @@ The following configuration options are available:
    
 - ### *`esp_idf_components`*, `$ESP_IDF_COMPONENTS` (*native* builder only)
 
+    > **Note**  
+    > The esp-idf is split into components, where one component is essentially a
+    > library with its name typically being the name of the containing directory (for more
+    > information see the [esp-idf build system
+    > docs](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/api-guides/build-system.html)).
+    >
+    > To see which components `esp-idf-sys` compiled, run the build with the `-vv` flag
+    > (to display build script output), and look for `[esp-idf-sys <version>] Built
+    > components: ...` in the output.
+
     The (`;`-separated for the environment variable) list of esp-idf component names that
     should be built. This list is used to trim the esp-idf build. Any component that is a
     dependency of a component in this list will also automatically be built.
@@ -462,12 +472,18 @@ path = "path/to/component"
 service_url = "https://componentregistry.company.com"
 ```
 
-For example, to add a dependency the `1.2.x` version of the `espressif/mdns` component, 
+For example, to add a dependency the `1.2.x` version of the `espressif/mdns` component,
 add the following to your `Cargo.toml`:
 ```toml
 [[package.metadata.esp-idf-sys.extra_components]]
 remote_component = { name = "espressif/mdns", version = "1.2" }
 ```
+
+> **Note**  
+> Slashes (`/`) in a remote component's name will be replaced with two underscores `__`
+> for the name of the compiled component (e.g. `espressif/mdns` will become
+> `espressif__mdns` with the [`cfg`](#conditional-compilation)
+> `esp_idf_comp_espressif__mdns_enabled`).
 
 ## Conditional compilation
 
