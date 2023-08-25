@@ -211,11 +211,9 @@
 #endif
 
 #ifdef ESP_IDF_COMP_DRIVER_ENABLED
-#if ESP_IDF_VERSION_MAJOR > 4
-#include "esp_adc/adc_oneshot.h"
-#endif
 #include "driver/adc.h"
 #if ESP_IDF_VERSION_MAJOR > 4
+#include "esp_adc/adc_oneshot.h"
 #include "esp_adc/adc_continuous.h"
 #endif
 #include "driver/twai.h"
