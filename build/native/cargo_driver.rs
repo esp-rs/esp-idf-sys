@@ -10,10 +10,10 @@ use config::{ESP_IDF_REPOSITORY_VAR, ESP_IDF_VERSION_VAR};
 use embuild::cargo::IntoWarning;
 use embuild::cmake::file_api::codemodel::Language;
 use embuild::cmake::file_api::ObjKind;
+use embuild::espidf::SourceTree;
 use embuild::espidf::{EspIdfOrigin, EspIdfRemote, FromEnvError, DEFAULT_ESP_IDF_REPOSITORY};
 use embuild::fs::copy_file_if_different;
 use embuild::utils::{OsStrExt, PathExt};
-use embuild::espidf::SourceTree;
 use embuild::{bindgen, build, cargo, cmake, espidf, git, kconfig, path_buf};
 
 use self::chip::Chip;
@@ -154,7 +154,10 @@ pub fn build() -> Result<EspIdfBuildOutput> {
             Ok((idf, install_dir.clone()))
         };
 
-        let esp_idf_dir = config.native.idf_path.as_ref()
+        let esp_idf_dir = config
+            .native
+            .idf_path
+            .as_ref()
             .map(|path| path.abspath_relative_to(&workspace_dir));
 
         // 1. Try to use the activated esp-idf environment if `esp_idf_tools_install_dir`
@@ -291,8 +294,7 @@ pub fn build() -> Result<EspIdfBuildOutput> {
             }
         };
         if !patch_set.is_empty() {
-            repository
-                .apply_once(patch_set.iter().map(|p| manifest_dir.join(p)))?;
+            repository.apply_once(patch_set.iter().map(|p| manifest_dir.join(p)))?;
         }
     }
 
