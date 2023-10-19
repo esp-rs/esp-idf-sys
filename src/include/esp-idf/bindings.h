@@ -153,8 +153,10 @@
 #include "lwip/sockets.h"
 #include "esp_sntp.h"
 #include "ping/ping_sock.h"
+#if ESP_IDF_VERSION_MAJOR > 5 || ESP_IDF_VERSION_MAJOR == 5 && ESP_IDF_VERSION_MINOR >= 1
 #ifdef ESP_IDF_COMP_ESP_NETIF_ENABLED
 #include "esp_netif_sntp.h"
+#endif
 #endif
 #endif
 
