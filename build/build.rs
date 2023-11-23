@@ -1,6 +1,6 @@
 #[cfg(not(any(feature = "pio", feature = "native")))]
 compile_error!("One of the features `pio` or `native` must be selected.");
-use std::iter::once;
+use std::{env, fs, iter::once, path::PathBuf};
 
 use anyhow::*;
 use bindgen::callbacks::{IntKind, ParseCallbacks};
@@ -158,7 +158,6 @@ fn main() -> anyhow::Result<()> {
     // Generate bindings separately for each unique module name.
     #[cfg(all(feature = "native", not(feature = "pio")))]
     (|| {
-        use std::fs;
         use std::io::{BufWriter, Write};
 
         let mut output_file =
@@ -212,6 +211,19 @@ fn main() -> anyhow::Result<()> {
     if let Some(link_args) = build_output.link_args {
         link_args.propagate();
     }
+
+    // The bootloader binary gets stored in the build folder of esp-idf-sys. Since this build
+    // folder is tagged with a fingerprint, it is not easily usable for tools such as espflash (see
+    // issue https://github.com/esp-rs/esp-idf-sys/issues/97). This moves the bootloader.bin file
+    // to the regular rust build folder (e.g. target/xtensa-esp32-espidf/release) so that it can be
+    // accessed more easily. This also affects the partition table binary.
+    let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
+    let bootloader_src = out_dir.join("build/bootloader/bootloader.bin");
+    let part_table_src = out_dir.join("build/partition_table/partition-table.bin");
+    let bootloader_target = out_dir.join("../../../bootloader.bin");
+    let part_table_target = out_dir.join("../../../partition-table.bin");
+    let _ = fs::copy(bootloader_src, bootloader_target);
+    let _ = fs::copy(part_table_src, part_table_target);
 
     Ok(())
 }
