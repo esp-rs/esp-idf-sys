@@ -1,9 +1,6 @@
 #[cfg(not(any(feature = "pio", feature = "native")))]
 compile_error!("One of the features `pio` or `native` must be selected.");
-
-#[cfg(feature = "copy-binaries-to-target-folder")]
-use std::{env, path::PathBuf};
-use std::{fs, iter::once};
+use std::iter::once;
 
 use anyhow::*;
 use bindgen::callbacks::{IntKind, ParseCallbacks};
@@ -161,6 +158,7 @@ fn main() -> anyhow::Result<()> {
     // Generate bindings separately for each unique module name.
     #[cfg(all(feature = "native", not(feature = "pio")))]
     (|| {
+        use std::fs;
         use std::io::{BufWriter, Write};
 
         let mut output_file =
@@ -228,6 +226,7 @@ fn copy_binaries_to_target_folder() {
     // issue https://github.com/esp-rs/esp-idf-sys/issues/97). This moves the bootloader.bin file
     // to the regular rust build folder (e.g. target/xtensa-esp32-espidf/release) so that it can be
     // accessed more easily. This also affects the partition table binary.
+    use std::{env, fs, path::PathBuf};
     let out_dir = PathBuf::from(env::var("OUT_DIR").unwrap());
     let bootloader_src = out_dir.join("build/bootloader/bootloader.bin");
     let part_table_src = out_dir.join("build/partition_table/partition-table.bin");
