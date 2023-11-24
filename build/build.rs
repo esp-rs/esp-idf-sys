@@ -1,6 +1,9 @@
 #[cfg(not(any(feature = "pio", feature = "native")))]
 compile_error!("One of the features `pio` or `native` must be selected.");
-use std::{env, fs, iter::once, path::PathBuf};
+
+#[cfg(feature = "copy-binaries-to-target-folder")]
+use std::{env, path::PathBuf};
+use std::{fs, iter::once};
 
 use anyhow::*;
 use bindgen::callbacks::{IntKind, ParseCallbacks};
@@ -212,6 +215,14 @@ fn main() -> anyhow::Result<()> {
         link_args.propagate();
     }
 
+    #[cfg(feature = "copy-binaries-to-target-folder")]
+    copy_binaries_to_target_folder();
+
+    Ok(())
+}
+
+#[cfg(feature = "copy-binaries-to-target-folder")]
+fn copy_binaries_to_target_folder() {
     // The bootloader binary gets stored in the build folder of esp-idf-sys. Since this build
     // folder is tagged with a fingerprint, it is not easily usable for tools such as espflash (see
     // issue https://github.com/esp-rs/esp-idf-sys/issues/97). This moves the bootloader.bin file
@@ -224,6 +235,4 @@ fn main() -> anyhow::Result<()> {
     let part_table_target = out_dir.join("../../../partition-table.bin");
     let _ = fs::copy(bootloader_src, bootloader_target);
     let _ = fs::copy(part_table_src, part_table_target);
-
-    Ok(())
 }
