@@ -29,8 +29,6 @@ native = ["embuild/cmake", "embuild/espidf"]
 # Backup: use `platformio` to build the `esp-idf`
 pio = ["embuild/pio"]
 
-copy-binaries-to-target-folder = []
-
 [dependencies]
 libc = "0.2" # Only to check if the rustc flag `-cfg espidf_time64` is properly defined
 build-time = "0.1"   # For esp_app_desc!()
