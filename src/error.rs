@@ -1,4 +1,4 @@
-use core::{ffi, fmt, num::NonZeroI32, slice, str};
+use core::{ffi, fmt, num::NonZeroI32, str};
 
 use crate::{esp_err_t, esp_err_to_name, ESP_OK};
 
