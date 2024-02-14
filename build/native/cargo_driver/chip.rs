@@ -57,8 +57,11 @@ impl Chip {
         matches!(self, Self::ESP32 | Self::ESP32S2 | Self::ESP32S3)
     }
 
-    /// The name of the gcc toolchain (to compile the `esp-idf`) for `idf_tools.py`.
-    pub fn gcc_toolchain(&self, version: Option<&EspIdfVersion>) -> &'static str {
+    /// The name of the gcc toolchain (to compile the `esp-idf`) that `idf_tools.py`
+    /// should find and install. idf_tools.py might install additional components based
+    /// on what is specified here, for example an xtensa-esp-elf can also end up installing
+    /// xtensa-espXX-elf also
+    pub fn gcc_toolchain_install(&self, version: Option<&EspIdfVersion>) -> &'static str {
         let new = version
             .map(|version| version.major > 5 || version.major == 5 && version.minor > 1)
             .unwrap_or(true);
@@ -94,9 +97,28 @@ impl Chip {
         }
     }
 
-    /// The name of the gcc toolchain for the ultra low-power co-processor for
-    /// `idf_tools.py`.
-    pub fn ulp_gcc_toolchain(&self, version: Option<&EspIdfVersion>) -> Option<&'static str> {
+    /// The name of the gcc toolchain that should be actually used to compile/link
+    /// for the specific idf target
+    pub fn gcc_toolchain_link(&self, _version: Option<&EspIdfVersion>) -> &'static str {
+        match self {
+            Self::ESP32 => "xtensa-esp32-elf",
+            Self::ESP32S2 => "xtensa-esp32s2-elf",
+            Self::ESP32S3 => "xtensa-esp32s3-elf",
+            Self::ESP32C2
+            | Self::ESP32C3
+            | Self::ESP32H2
+            | Self::ESP32C5
+            | Self::ESP32C6
+            | Self::ESP32P4 => "riscv32-esp-elf",
+        }
+    }
+
+    /// The name of the gcc toolchain for the ultra low-power co-processor that
+    /// `idf_tools.py` should install
+    pub fn ulp_gcc_toolchain_install(
+        &self,
+        version: Option<&EspIdfVersion>,
+    ) -> Option<&'static str> {
         match self {
             Self::ESP32 => Some("esp32ulp-elf"),
             Self::ESP32S2 | Self::ESP32S3 | Self::ESP32C6 | Self::ESP32P4 => Some(
@@ -115,6 +137,13 @@ impl Chip {
             ),
             _ => None,
         }
+    }
+
+    /// The name of the gcc toolchain for the ultra low-power co-processor
+    /// that is actually used to compile/link for the specific idf target
+    #[allow(dead_code)]
+    pub fn ulp_gcc_toolchain_link(&self, version: Option<&EspIdfVersion>) -> Option<&'static str> {
+        self.ulp_gcc_toolchain_install(version)
     }
 
     pub fn cmake_toolchain_file(self) -> String {
