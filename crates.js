@@ -1,0 +1,1 @@
+window.ALL_CRATES = ["const_format","esp_idf_sys","libc"];
