@@ -267,13 +267,12 @@
 #include "driver/twai.h"
 
 #if defined(CONFIG_IDF_TARGET_ESP32) || defined(CONFIG_IDF_TARGET_ESP32S2)
+#include "driver/dac.h"
 #if ESP_IDF_VERSION_MAJOR > 5 ||                                               \
     ESP_IDF_VERSION_MAJOR == 5 && ESP_IDF_VERSION_MINOR >= 1
 #include "driver/dac_continuous.h"
 #include "driver/dac_cosine.h"
 #include "driver/dac_oneshot.h"
-#else
-#include "driver/dac.h"
 #endif
 #endif
 
