@@ -276,9 +276,8 @@
 #include "driver/i2c_types.h"
 #include "driver/i2c_master.h"
 #include "driver/i2c_slave.h"
-#else
-#include "driver/i2c.h"
 #endif
+#include "driver/i2c.h"
 #include "driver/i2s.h"
 #include "driver/ledc.h"
 #if ESP_IDF_VERSION_MAJOR > 4
