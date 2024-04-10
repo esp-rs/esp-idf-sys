@@ -104,7 +104,11 @@ fn main() -> anyhow::Result<()> {
             .use_core()
             .enable_function_attribute_detection()
             .clang_arg("-DESP_PLATFORM")
-            .clang_arg(if cfg!(feature = "new_rmt_driver") { "-DUSE_NEW_RMT_DRIVER" } else { "" })
+            .clang_arg(if cfg!(feature = "new_rmt_driver") {
+                "-DUSE_NEW_RMT_DRIVER"
+            } else {
+                ""
+            })
             .blocklist_function("strtold")
             .blocklist_function("_strtold_r")
             .blocklist_function("v.*printf")
