@@ -25,6 +25,7 @@ binstart = []
 libstart = []
 native = []
 pio = ["embuild/pio"]
+new_rmt_driver = []
 
 [dependencies]
 libc = "0.2" # Only to check if the rustc flag `-cfg espidf_time64` is properly defined
