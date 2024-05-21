@@ -10,7 +10,7 @@ pub struct PatchesRef(
     *mut core::ffi::c_void,
 );
 
-/// A hack to make sure that the rwlock implementation is linked to the final executable
+/// A hack to make sure that certain symbols are linked to the final executable
 /// Call this function once e.g. in the beginning of your main function
 pub fn link_patches() -> PatchesRef {
     #[cfg(feature = "std")]
