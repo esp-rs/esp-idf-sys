@@ -12,7 +12,6 @@ use strum::{Display, EnumDiscriminants, EnumString};
 
 use crate::config::BuildConfig;
 
-
 #[allow(dead_code)]
 pub const NO_PATCHES: &[&str] = &[];
 
