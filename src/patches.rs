@@ -26,6 +26,6 @@ pub fn link_patches() -> PatchesRef {
 #[cfg(esp_idf_version_major = "4")]
 #[deprecated(
     since = "0.35.0",
-    note = "ESP_IDF version 4 is now considerd deprecated.\nPlease upgrade your project to ESP_IDF 5 or later.\nFuture releases will remove parts that are v4 related"
+    note = "ESP-IDF version 4 is now considered deprecated.\nPlease upgrade your project to ESP-IDF 5 or later.\nFuture releases will remove parts that are version 4 related"
 )]
 const fn notify_about_deprecation() {}
