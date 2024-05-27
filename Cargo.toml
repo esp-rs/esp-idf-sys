@@ -44,4 +44,4 @@ which = "4.4"
 
 
 [patch.crates-io]
-embuild ={ git = "https://github.com/Vollbrecht/embuild", branch = "develop"}
+embuild ={ git = "https://github.com/esp-rs/embuild"}
