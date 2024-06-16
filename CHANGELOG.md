@@ -7,11 +7,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## Unreleased
 
-### Removed
-* ESP-IDF v4.3 support - including code and patches. (#305)
-* Unused esp8266 rtos sdk (#305)
-### Changed
-* **ESP-IDF v4.4 is now considered deprecated.** Please start upgrading to ESP-IDF v5.  
+### Deprecated
+**ESP-IDF v4.4** Please start upgrading to ESP-IDF v5.
+### Breaking
+* removed: ESP-IDF v4.3 support - including code and patches. (#305)
+* removed: Unused esp8266 rtos sdk (#305)
 * EspError now implements `Debug` and provides a human readable error code. (#294)
 * `bindgen` dependancy updated to the latest release version. (#304)
 ### Added
