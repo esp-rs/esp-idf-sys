@@ -18,6 +18,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 * Include new dac_oneshot and dac_continous headers in default bindings.h. (#289)
 * Include new i2c headers in default bindings.h. (#290)
 * Include new rmt headers in default bindings.h.
+* Include usb-serial-jtag header. (#317)
 ### Fixed
 * Building against esp-idf >= v5.3 by adding additional conditions on the esp_lcd headers. Note that "esp_lcd_panel_rgb.h" was removed upstream since idf 5.3. (#303)
 
