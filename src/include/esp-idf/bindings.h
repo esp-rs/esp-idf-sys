@@ -318,7 +318,7 @@
 #endif
 #include "driver/rtc_cntl.h"
 #include "driver/rtc_io.h"
-#ifdef CONFIG_IDF_TARGET_ESP32
+#ifdef SOC_SDIO_SLAVE_SUPPORTED
 #include "driver/sdio_slave.h"
 #endif
 #include "driver/sdmmc_defs.h"
