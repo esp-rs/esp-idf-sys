@@ -513,4 +513,7 @@
 #include "driver/usb_serial_jtag.h"
 #endif
 
-// n
+// official onewire_bus remote component
+#ifdef ESP_IDF_COMP_ESPRESSIF__ONEWIRE_BUS_ENABLED
+#include "onewire_bus.h"
+#endif
