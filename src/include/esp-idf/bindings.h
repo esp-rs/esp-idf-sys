@@ -163,6 +163,7 @@
 #include "diskio_rawflash.h"
 #include "diskio_sdmmc.h"
 #include "diskio_wl.h"
+#include "ff.h"
 #endif
 
 #endif
