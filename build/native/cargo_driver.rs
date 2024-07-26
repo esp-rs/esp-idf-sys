@@ -93,7 +93,7 @@ pub fn build() -> Result<EspIdfBuildOutput> {
         );
 
         let mut tools = vec![];
-        let mut subtools = vec![chip.gcc_toolchain(version.as_ref().ok())];
+        let mut subtools = vec![chip.gcc_toolchain_install(version.as_ref().ok())];
 
         // Use custom cmake for esp-idf<4.4, because we need at least cmake-3.20
         match version.as_ref().map(|v| (v.major, v.minor, v.patch)) {
@@ -109,7 +109,7 @@ pub fn build() -> Result<EspIdfBuildOutput> {
             subtools.push("ninja")
         }
         if !cfg!(target_os = "linux") || !cfg!(target_arch = "aarch64") {
-            subtools.extend(chip.ulp_gcc_toolchain(version.as_ref().ok()));
+            subtools.extend(chip.ulp_gcc_toolchain_install(version.as_ref().ok()));
         }
         tools.push(espidf::Tools::new(subtools));
 
@@ -251,13 +251,13 @@ pub fn build() -> Result<EspIdfBuildOutput> {
             .install_dir(linker_install_dir.path().map(Into::into))
             .with_tools(move |_, _| {
                 Ok(vec![espidf::Tools::new(vec![
-                    chip.gcc_toolchain(version_for_installer.as_ref())
+                    chip.gcc_toolchain_install(version_for_installer.as_ref())
                 ])])
             })
             .install()
             .context("Could not install GCC linker")?;
 
-        let linker_name = format!("{}-gcc", chip.gcc_toolchain(version.as_ref()));
+        let linker_name = format!("{}-gcc", chip.gcc_toolchain_link(version.as_ref()));
 
         let linker =
             which::which_in_global(linker_name.clone(), Some(installer.exported_path.clone()))?
