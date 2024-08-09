@@ -208,6 +208,10 @@
 #include "esp_ota_ops.h"
 #endif
 
+#ifdef ESP_IDF_COMP_ESP_HTTPS_OTA_ENABLED
+#include "esp_https_ota.h"
+#endif
+
 #ifdef ESP_IDF_COMP_ESP_HTTP_CLIENT_ENABLED
 #include "esp_http_client.h"
 #endif
