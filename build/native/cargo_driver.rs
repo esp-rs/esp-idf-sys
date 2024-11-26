@@ -10,7 +10,9 @@ use config::{ESP_IDF_REPOSITORY_VAR, ESP_IDF_VERSION_VAR};
 use embuild::cargo::IntoWarning;
 use embuild::cmake::file_api::codemodel::Language;
 use embuild::cmake::file_api::ObjKind;
-use embuild::espidf::{EspIdfOrigin, EspIdfRemote, FromEnvError, DEFAULT_ESP_IDF_REPOSITORY};
+use embuild::espidf::{
+    EspIdfOrigin, EspIdfRemote, FromEnvError, SourceTree, DEFAULT_ESP_IDF_REPOSITORY,
+};
 use embuild::fs::copy_file_if_different;
 use embuild::utils::{OsStrExt, PathExt};
 use embuild::{bindgen, build, cargo, cmake, espidf, git, kconfig, path_buf};
@@ -50,7 +52,7 @@ pub fn build() -> Result<EspIdfBuildOutput> {
         if let Ok(chip) = Chip::from_str(mcu) {
             if !supported_chips.iter().any(|sc| *sc == chip) {
                 bail!(
-                    "Specified MCU '{chip}' is not amongst the MCUs ([{}]) supported by the build target ('{target}')", 
+                    "Specified MCU '{chip}' is not amongst the MCUs ([{}]) supported by the build target ('{target}')",
                     supported_chips.iter().map(|chip| format!("{chip}")).collect::<Vec<_>>().join(", ")
                 );
             }
@@ -83,13 +85,13 @@ pub fn build() -> Result<EspIdfBuildOutput> {
     let cmake_generator = config.native.esp_idf_cmake_generator();
 
     // A closure to specify which tools `idf-tools.py` should install.
-    let make_tools = move |repo: &git::Repository,
+    let make_tools = move |tree: &SourceTree,
                            version: &Result<espidf::EspIdfVersion>|
           -> Result<Vec<espidf::Tools>> {
         eprintln!(
             "Using esp-idf {} at '{}'",
             espidf::EspIdfVersion::format(version),
-            repo.worktree().display()
+            tree.path().display(),
         );
 
         let mut tools = vec![];
@@ -121,14 +123,13 @@ pub fn build() -> Result<EspIdfBuildOutput> {
     // we're using msys/cygwin.
     // But this variable is also present when using git-bash.
     env::remove_var("MSYSTEM");
-
     // Install the esp-idf and its tools.
     let (idf, tools_install_dir) = {
         // Get the install dir location from the build config, or use
         // [`crate::config::DEFAULT_TOOLS_INSTALL_DIR`] if unset.
-        let (install_dir, is_default_install_dir) = config.esp_idf_tools_install_dir()?;
+        let (idf_tools_install_dir, is_default_install_dir) = config.esp_idf_tools_install_dir()?;
         // EspIdf must come from the environment if `esp_idf_tools_install_dir` == `fromenv`.
-        let require_from_env = install_dir.is_from_env();
+        let require_from_env = idf_tools_install_dir.is_from_env();
         let maybe_from_env = require_from_env || is_default_install_dir;
 
         // Closure to install the esp-idf using `embuild::espidf::Installer`.
@@ -136,23 +137,23 @@ pub fn build() -> Result<EspIdfBuildOutput> {
             match &esp_idf_origin {
                 EspIdfOrigin::Custom(repo) => {
                     eprintln!(
-                    "Using custom user-supplied esp-idf repository at '{}' (detected from env variable `{}`)",
-                    repo.worktree().display(),
-                    espidf::IDF_PATH_VAR
-                );
+                        "Using custom user-supplied esp-idf repository at '{}' (detected from env variable `{}`)",
+                        repo.path().display(),
+                        espidf::IDF_PATH_VAR
+                    );
                     if let Some(custom_url) = &config.native.esp_idf_repository {
                         cargo::print_warning(format_args!(
-                        "Ignoring configuration setting `{ESP_IDF_REPOSITORY_VAR}=\"{custom_url}\"`: \
-                         custom esp-idf repository detected via ${}",
-                        espidf::IDF_PATH_VAR
-                    ));
+                            "Ignoring configuration setting `{ESP_IDF_REPOSITORY_VAR}=\"{custom_url}\"`: \
+                             custom esp-idf repository detected via ${}",
+                            espidf::IDF_PATH_VAR
+                        ));
                     }
                     if let Some(custom_version) = &config.native.esp_idf_version {
                         cargo::print_warning(format_args!(
-                        "Ignoring configuration setting `{ESP_IDF_VERSION_VAR}` ({custom_version}): \
-                         custom esp-idf repository detected via ${}",
-                        espidf::IDF_PATH_VAR
-                    ));
+                            "Ignoring configuration setting `{ESP_IDF_VERSION_VAR}` ({custom_version}): \
+                             custom esp-idf repository detected via ${}",
+                            espidf::IDF_PATH_VAR
+                        ));
                     }
                 }
                 EspIdfOrigin::Managed(remote) => {
@@ -161,12 +162,14 @@ pub fn build() -> Result<EspIdfBuildOutput> {
             };
 
             let idf = espidf::Installer::new(esp_idf_origin)
-                .install_dir(install_dir.path().map(Into::into))
+                .install_dir(idf_tools_install_dir.path().map(Into::into))
                 .with_tools(make_tools)
                 .install()
                 .context("Could not install esp-idf")?;
-            Ok((idf, install_dir.clone()))
+            Ok((idf, idf_tools_install_dir.clone()))
         };
+
+        let idf_path = config.native.idf_path.as_deref();
 
         // 1. Try to use the activated esp-idf environment if `esp_idf_tools_install_dir`
         //    is `fromenv` or unset.
@@ -174,34 +177,34 @@ pub fn build() -> Result<EspIdfBuildOutput> {
         //    available and install the tools using `embuild::espidf::Installer` in
         //    `install_dir`.
         // 3. Install the esp-idf and its tools in `install_dir`.
-        match (espidf::EspIdf::try_from_env(), maybe_from_env) {
+        match (espidf::EspIdf::try_from_env(idf_path), maybe_from_env) {
             (Ok(idf), true) => {
                 eprintln!(
                     "Using activated esp-idf {} environment at '{}'",
                     espidf::EspIdfVersion::format(&idf.version),
-                    idf.repository.worktree().display()
+                    idf.esp_idf_dir.path().display()
                 );
 
                 (idf, InstallDir::FromEnv)
             },
             (Ok(idf), false) => {
-                    cargo::print_warning(format_args!(
-                        "Ignoring activated esp-idf environment: {ESP_IDF_TOOLS_INSTALL_DIR_VAR} != {}", InstallDir::FromEnv
-                    ));
-                    install(EspIdfOrigin::Custom(idf.repository))?
+                cargo::print_warning(format_args!(
+                    "Ignoring activated esp-idf environment: {ESP_IDF_TOOLS_INSTALL_DIR_VAR} != {}", InstallDir::FromEnv
+                ));
+                install(EspIdfOrigin::Custom(idf.esp_idf_dir))?
             },
             (Err(FromEnvError::NotActivated { source: err, .. }), true) |
             (Err(FromEnvError::NoRepo(err)), true) if require_from_env => {
                 return Err(err.context(
-                    format!("activated esp-idf environment not found but required by {ESP_IDF_TOOLS_INSTALL_DIR_VAR} == {install_dir}")
+                    format!("activated esp-idf environment not found but required by {ESP_IDF_TOOLS_INSTALL_DIR_VAR} == {idf_tools_install_dir}")
                 ))
             }
-            (Err(FromEnvError::NotActivated { esp_idf_repo, .. }), _) => {
-                install(EspIdfOrigin::Custom(esp_idf_repo))?
+            (Err(FromEnvError::NotActivated { esp_idf_dir, .. }), _) => {
+                install(EspIdfOrigin::Custom(esp_idf_dir))?
             },
             (Err(FromEnvError::NoRepo(_)), _) => {
-                let origin = match &config.native.idf_path {
-                    Some(idf_path) => EspIdfOrigin::Custom(git::Repository::open(idf_path)?),
+                let origin = match idf_path {
+                    Some(idf_path) => EspIdfOrigin::Custom(SourceTree::Plain(idf_path.to_path_buf())),
                     None => EspIdfOrigin::Managed(EspIdfRemote {
                         git_ref: config.native.esp_idf_version(),
                         repo_url: config.native.esp_idf_repository.clone()
@@ -274,13 +277,12 @@ pub fn build() -> Result<EspIdfBuildOutput> {
         None
     };
 
-    // Apply patches, only if the patches were not previously applied and if the esp-idf repo is managed.
-    if idf.is_managed_espidf {
+    if let SourceTree::Git(repository) = &idf.esp_idf_dir {
         let patch_set = match idf.version.as_ref().map(|v| (v.major, v.minor, v.patch)) {
             // master branch
             _ if {
-                let default_branch = idf.repository.get_default_branch()?;
-                let curr_branch = idf.repository.get_branch_name()?;
+                let default_branch = repository.get_default_branch()?;
+                let curr_branch = repository.get_branch_name()?;
                 default_branch == curr_branch && default_branch.is_some()
             } =>
             {
@@ -305,8 +307,7 @@ pub fn build() -> Result<EspIdfBuildOutput> {
             }
         };
         if !patch_set.is_empty() {
-            idf.repository
-                .apply_once(patch_set.iter().map(|p| manifest_dir.join(p)))?;
+            repository.apply_once(patch_set.iter().map(|p| manifest_dir.join(p)))?;
         }
     }
 
@@ -412,7 +413,7 @@ pub fn build() -> Result<EspIdfBuildOutput> {
     )?;
 
     let cmake_toolchain_file = path_buf![
-        &idf.repository.worktree(),
+        &idf.esp_idf_dir.path(),
         "tools",
         "cmake",
         chip.cmake_toolchain_file()
@@ -428,7 +429,7 @@ pub fn build() -> Result<EspIdfBuildOutput> {
             cmake::cmake(),
             "-P",
             extractor_script.as_ref().as_os_str();
-            env=("IDF_PATH", &idf.repository.worktree().as_os_str()))
+            env=("IDF_PATH", idf.esp_idf_dir.path()))
         .stdout()?;
 
         let mut vars = cmake::process_script_variables_extractor_output(output)?;
@@ -469,7 +470,7 @@ pub fn build() -> Result<EspIdfBuildOutput> {
         .cxxflag(cxx_flags)
         .env("IDF_COMPONENT_MANAGER", idf_comp_manager)
         .env("EXTRA_COMPONENT_DIRS", extra_component_dirs)
-        .env("IDF_PATH", idf.repository.worktree())
+        .env("IDF_PATH", idf.esp_idf_dir.path())
         .env("PATH", &idf.exported_path)
         .env("SDKCONFIG_DEFAULTS", defaults_files)
         .env("IDF_TARGET", &chip_name)
@@ -520,7 +521,7 @@ pub fn build() -> Result<EspIdfBuildOutput> {
         .context("Could not determine the compiler from cmake")?;
 
     let build_info = espidf::EspIdfBuildInfo {
-        esp_idf_dir: idf.repository.worktree().to_owned(),
+        esp_idf_dir: idf.esp_idf_dir.path().to_owned(),
         exported_path_var: idf.exported_path.try_to_str()?.to_owned(),
         venv_python: idf.venv_python,
         build_dir: cmake_build_dir.clone(),
