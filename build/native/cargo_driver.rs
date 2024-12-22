@@ -176,6 +176,12 @@ pub fn build() -> Result<EspIdfBuildOutput> {
             Ok((idf, idf_tools_install_dir.clone()))
         };
 
+        // TODO: This is a bit of a mess.
+        // We should probably refactor this and the lines below to make it more readable.
+        //
+        // For one, it is still unclear to me when this path should be used and when not.
+        // It seems an option is to also completely retire specifying the IDF PATH in the cargo-metadata config,
+        // see: https://github.com/esp-rs/esp-idf-sys/pull/353#issuecomment-2543179482
         let idf_path = config.native.idf_path.as_deref();
 
         // 1. Try to use the activated esp-idf environment if `esp_idf_tools_install_dir`
