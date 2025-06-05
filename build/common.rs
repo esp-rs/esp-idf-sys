@@ -457,8 +457,15 @@ pub fn setup_clang_env(path: Option<&Path>) -> Result<()> {
 
         if policy != "ignore" {
             #[allow(deprecated)]
-            let espup_clang_path =
-                std::env::home_dir().map(|home| home.join(".espup").join("esp-clang"));
+            let espup_clang_path = std::env::home_dir().map(|home| {
+                const ESPUP_CLANG_SUFFIX: &str = "espup/esp-clang";
+                let local_share_path = home.join(".local").join("share").join(ESPUP_CLANG_SUFFIX);
+                if local_share_path.exists() {
+                    local_share_path
+                } else {
+                    home.join(format!(".{ESPUP_CLANG_SUFFIX}"))
+                }
+            });
 
             let err_msg = if let Some(espup_clang_path) = espup_clang_path {
                 if let Ok(real_path) = std::fs::read_link(&espup_clang_path) {
