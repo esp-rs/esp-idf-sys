@@ -199,6 +199,46 @@ impl EspIdfVersion {
     }
 }
 
+impl std::str::FromStr for EspIdfVersion {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<&str> = s.split('.').collect();
+        match parts.len() {
+            2 => {
+                let major = parts[0]
+                    .parse::<u32>()
+                    .map_err(|e| format!("Failed to parse major version: {e}"))?;
+                let minor = parts[1]
+                    .parse::<u32>()
+                    .map_err(|e| format!("Failed to parse minor version: {e}"))?;
+                Ok(EspIdfVersion {
+                    major,
+                    minor,
+                    patch: 0,
+                })
+            }
+            3 => {
+                let major = parts[0]
+                    .parse::<u32>()
+                    .map_err(|e| format!("Failed to parse major version: {e}"))?;
+                let minor = parts[1]
+                    .parse::<u32>()
+                    .map_err(|e| format!("Failed to parse minor version: {e}"))?;
+                let patch = parts[2]
+                    .parse::<u32>()
+                    .map_err(|e| format!("Failed to parse patch version: {e}"))?;
+                Ok(EspIdfVersion {
+                    major,
+                    minor,
+                    patch,
+                })
+            }
+            _ => Err(format!("Invalid version format: {s}")),
+        }
+    }
+}
+
 pub fn build_profile() -> String {
     std::env::var("PROFILE").expect("No cargo `PROFILE` environment variable")
 }

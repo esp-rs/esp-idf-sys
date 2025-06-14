@@ -62,16 +62,16 @@ macro_rules! esp_app_desc {
                 } else {
                     $crate::build_time::build_time_utc!("%H:%M:%S")
                 }),
-                #[cfg(not(all(
-                    esp_idf_app_compile_time_date,
-                    not(esp_idf_app_reproducible_build)
-                )))]
-                time: [0i8; 16],
-                #[cfg(not(all(
-                    esp_idf_app_compile_time_date,
-                    not(esp_idf_app_reproducible_build)
-                )))]
-                date: [0i8; 16],
+                #[cfg(all(
+                    not(esp_idf_app_compile_time_date),
+                    esp_idf_app_reproducible_build
+                ))]
+                time: [0 as ::core::ffi::c_char; 16],
+                #[cfg(all(
+                    not(esp_idf_app_compile_time_date),
+                    esp_idf_app_reproducible_build
+                ))]
+                date: [0 as ::core::ffi::c_char; 16],
                 idf_ver: str_to_cstr_array($crate::const_format::formatcp!(
                     "{}.{}.{}",
                     $crate::ESP_IDF_VERSION_MAJOR,
