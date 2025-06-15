@@ -3,7 +3,6 @@
 //! does provide the Rust STD layer on top of ESP IDF!
 
 #![allow(unknown_lints)]
-#![allow(unexpected_cfgs)]
 #![allow(renamed_and_removed_lints)]
 #![allow(clippy::thread_local_initializer_can_be_made_const)]
 
