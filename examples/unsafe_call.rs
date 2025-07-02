@@ -2,7 +2,6 @@
 //! and not otherwise available via the Rust Standard Library
 
 #![allow(unknown_lints)]
-#![allow(unexpected_cfgs)]
 
 use esp_idf_sys::esp_get_free_heap_size;
 
