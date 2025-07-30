@@ -10,6 +10,8 @@ use embuild::{bindgen as bindgen_utils, build, cargo, kconfig, path_buf};
 mod common;
 mod config;
 
+mod rust_cfg;
+
 // Features `native` and `pio` control whether the build is performed using the "native" ESP IDF CMake-based build,
 // or via the PlatformIO `espressif32` module. They work as follows:
 // - If neither the `native` nor the `pio` feature is specified, native build would be used
@@ -193,6 +195,29 @@ fn main() -> anyhow::Result<()> {
     };
     cfg_args.propagate();
     cfg_args.output();
+
+    // Collect all valid esp-idf version git tags.
+    // Allowes for compile time verification of cfg attributes.
+    //
+    // Collection is done out of band using the generate_cfg.sh script.
+    #[cfg(feature = "__collect_git_tags")]
+    {
+        rust_cfg::collect_git_tags();
+    }
+
+    // Collect all cfg attributes from the build system and register them as known rustc cfg attributes.
+    //
+    // This is limited to what the current run's sdkconfig will enable. Thats why we run this out of band for
+    // all possible targets, and a variety of sdkconfig files enabling different kind of esp-idf feature sets.
+    //
+    // Collection is is done out of band using the generate_cfg.sh script.
+    #[cfg(feature = "__collect_cfg")]
+    {
+        rust_cfg::collect_cfg_args(cfg_args.args.iter().cloned());
+    }
+
+    // Register every collected esp-idf config as a rustc cfg attribute.
+    rust_cfg::emit_check_cfg();
 
     // In case other crates need to have access to the ESP-IDF C headers
     build_output.cincl_args.propagate();
