@@ -13,7 +13,7 @@ readme = "README.md"
 links = "esp_idf"
 build = "build/build.rs"
 documentation = "https://docs.esp-rs.org/esp-idf-sys/"
-rust-version = "1.66"
+rust-version = "1.77"
 
 [lib]
 harness = false
@@ -28,6 +28,10 @@ binstart = []
 libstart = []
 native = []
 pio = ["embuild/pio"]
+
+# only used internally to collect all possible combinations of generated cargo confings
+__collect_cfg = []
+__collect_git_tags = []
 
 [dependencies]
 libc = "0.2" # Only to check if the rustc flag `-cfg espidf_time64` is properly defined

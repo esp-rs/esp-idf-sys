@@ -12,7 +12,6 @@
 )]
 #![allow(unknown_lints)]
 #![allow(renamed_and_removed_lints)]
-#![allow(unexpected_cfgs)]
 
 pub use bindings::*;
 pub use error::*;
@@ -33,7 +32,7 @@ pub use patches::PatchesRef;
 #[macro_use]
 extern crate std;
 
-#[cfg(feature = "alloc")]
+#[cfg(feature = "alloc_handler")]
 #[allow(unused_imports)]
 #[macro_use]
 extern crate alloc;
