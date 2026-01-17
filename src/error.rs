@@ -72,6 +72,7 @@ impl EspError {
     }
 }
 
+#[cfg(not(feature = "std"))]
 impl core::error::Error for EspError {}
 
 #[cfg(feature = "std")]
