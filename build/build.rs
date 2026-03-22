@@ -1,4 +1,5 @@
 use std::iter::once;
+use std::path::PathBuf;
 
 use anyhow::*;
 use common::*;
@@ -125,6 +126,28 @@ fn main() -> anyhow::Result<()> {
 
     cargo::track_file(&header_file);
 
+    // CONFIG_LIBC_PICOLIBC=y is normally only supported with GCC toolchain. This is a problem
+    // as we use clang/bindgen to generate the bindings (even if a GCC toolchain is selected).
+    // clang/bindgen doesn't understand GCC's -specs=picolibc.specs and falls back to the
+    // newlib sysroot headers, causing errors like 'unknown type name __FILE'.
+    // Detect the picolibc include dir (relative to the GCC sysroot) and inject it via the
+    // Factory's clang args so it is searched before the sysroot -I path added by embuild.
+    // gcc_sysroot is e.g. <toolchain>/riscv32-esp-elf/riscv32-esp-elf/;
+    // picolibc is at <toolchain>/riscv32-esp-elf/picolibc/include (one level up from sysroot).
+    let picolibc_include: Option<PathBuf> = if cfg_args.get("esp_idf_libc_picolibc").is_some() {
+        let sysroot = build_output
+            .gcc_sysroot
+            .as_deref()
+            .ok_or_else(|| anyhow!("CONFIG_LIBC_PICOLIBC=y but GCC sysroot could not be found"))?;
+        let picolibc = sysroot.parent().unwrap().join("picolibc").join("include");
+        if !picolibc.exists() {
+            bail!("picolibc include dir not found at '{}'", picolibc.display());
+        }
+        Some(picolibc)
+    } else {
+        None
+    };
+
     // Because we have multiple bindgen invocations and we can't clone a bindgen::Builder,
     // we have to set the options every time.
     let configure_bindgen = |bindgen: embuild::bindgen::types::Builder| {
@@ -145,6 +168,13 @@ fn main() -> anyhow::Result<()> {
         // legacy enum is gone, so bindgen can handle the struct fine on its own.
         let bindgen = if idf_version_major < 6 {
             bindgen.blocklist_type("pcnt_unit_t")
+        } else {
+            bindgen
+        };
+        // If picolibc is active, inject its include path before the sysroot headers so
+        // bindgen picks up the right stdlib headers (clang ignores -specs=picolibc.specs).
+        let bindgen = if let Some(ref picolibc) = picolibc_include {
+            bindgen.clang_arg(format!("-I{}", picolibc.display()))
         } else {
             bindgen
         };
