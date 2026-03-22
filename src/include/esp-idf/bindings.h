@@ -404,6 +404,11 @@
 // GPIO
 #if OLD_DRIVER_COMP || defined(ESP_IDF_COMP_ESP_DRIVER_GPIO_ENABLED)
 #include "driver/gpio.h"
+// In ESP-IDF v6.0, soc/gpio_periph.h no longer includes soc/gpio_reg.h, so GPIO_OUT_REG
+// and friends are no longer transitively visible. Include it explicitly.
+#if ESP_IDF_VERSION_MAJOR >= 6
+#include "soc/gpio_reg.h"
+#endif
 #endif
 
 // GPTIMER
