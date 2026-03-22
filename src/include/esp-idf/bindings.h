@@ -272,13 +272,16 @@
 #endif
 
 #ifdef ESP_IDF_COMP_MBEDTLS_ENABLED
+#include "mbedtls/build_info.h"
 #include "mbedtls/ssl.h"
+#if MBEDTLS_VERSION_MAJOR < 4
 #include "mbedtls/aes.h"
 #include "mbedtls/cipher.h"
 #include "mbedtls/entropy.h"
 #include "mbedtls/ctr_drbg.h"
 #include "mbedtls/cmac.h"
 #include "mbedtls/ecdh.h"
+#endif
 #include "mbedtls/ecp.h"
 #include "mbedtls/debug.h"
 
