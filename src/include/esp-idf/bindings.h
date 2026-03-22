@@ -534,6 +534,9 @@
 #if OLD_DRIVER_COMP || defined(ESP_IDF_COMP_ESP_DRIVER_UART_ENABLED)
 #include "driver/uart.h"
 #include "driver/uart_select.h"
+#if ESP_IDF_VERSION_MAJOR >= 5 && defined(ESP_IDF_COMP_VFS_ENABLED)
+#include "driver/uart_vfs.h"
+#endif
 #endif
 
 // TEMP SENSOR
