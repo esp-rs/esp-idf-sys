@@ -317,9 +317,8 @@
 #endif
 
 #ifdef ESP_IDF_COMP_MBEDTLS_ENABLED
-#include "mbedtls/build_info.h"
 #include "mbedtls/ssl.h"
-#if MBEDTLS_VERSION_MAJOR < 4
+#if ESP_IDF_VERSION_MAJOR < 6
 #include "mbedtls/aes.h"
 #include "mbedtls/cipher.h"
 #include "mbedtls/entropy.h"
@@ -592,7 +591,7 @@
 #if OLD_DRIVER_COMP || defined(ESP_IDF_COMP_ESP_DRIVER_UART_ENABLED)
 #include "driver/uart.h"
 #include "driver/uart_select.h"
-#if ESP_IDF_VERSION_MAJOR >= 5 && defined(ESP_IDF_COMP_VFS_ENABLED)
+#if defined(ESP_IDF_COMP_VFS_ENABLED) && (ESP_IDF_VERSION_MAJOR > 5 || (ESP_IDF_VERSION_MAJOR == 5 && ESP_IDF_VERSION_MINOR >= 3))
 #include "driver/uart_vfs.h"
 #endif
 #endif
