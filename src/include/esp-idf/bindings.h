@@ -382,7 +382,7 @@
 #include "mdns.h"
 #endif
 
-#ifdef ESP_IDF_COMP_MQTT_ENABLED
+#if defined(ESP_IDF_COMP_MQTT_ENABLED) || defined(ESP_IDF_COMP_ESPRESSIF__MQTT_ENABLED)
 #include "mqtt_client.h"
 #ifdef CONFIG_MQTT_PROTOCOL_5
 #include "mqtt5_client.h"
