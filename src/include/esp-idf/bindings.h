@@ -182,6 +182,43 @@
 #endif
 #endif
 
+// External Ethernet PHY drivers (managed components)
+#ifdef ESP_IDF_COMP_ESPRESSIF__DP83848_ENABLED
+#include "esp_eth_phy_dp83848.h"
+#endif
+
+#ifdef ESP_IDF_COMP_ESPRESSIF__IP101_ENABLED
+#include "esp_eth_phy_ip101.h"
+#endif
+
+#ifdef ESP_IDF_COMP_ESPRESSIF__KSZ80XX_ENABLED
+#include "esp_eth_phy_ksz80xx.h"
+#endif
+
+#ifdef ESP_IDF_COMP_ESPRESSIF__LAN87XX_ENABLED
+#include "esp_eth_phy_lan87xx.h"
+#endif
+
+#ifdef ESP_IDF_COMP_ESPRESSIF__RTL8201_ENABLED
+#include "esp_eth_phy_rtl8201.h"
+#endif
+
+// External Ethernet SPI drivers (managed components)
+#ifdef ESP_IDF_COMP_ESPRESSIF__DM9051_ENABLED
+#include "esp_eth_mac_dm9051.h"
+#include "esp_eth_phy_dm9051.h"
+#endif
+
+#ifdef ESP_IDF_COMP_ESPRESSIF__W5500_ENABLED
+#include "esp_eth_mac_w5500.h"
+#include "esp_eth_phy_w5500.h"
+#endif
+
+#ifdef ESP_IDF_COMP_ESPRESSIF__KSZ8851SNL_ENABLED
+#include "esp_eth_mac_ksz8851snl.h"
+#include "esp_eth_phy_ksz8851snl.h"
+#endif
+
 // OpenThread support
 #ifdef ESP_IDF_COMP_OPENTHREAD_ENABLED
 #ifdef CONFIG_OPENTHREAD_ENABLED
