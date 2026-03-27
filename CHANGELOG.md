@@ -13,6 +13,11 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking
 - Added build-time check for symbol compatibility between `libc` and symbols defined in this library. If you see `libc/esp-idf-sys * mismatch` errors at build time, you might need to update your pinned `libc` version.
+- Related to the above compatibility check, if picolibc is selected (default for esp-idf >= 6.0, instead of newlib), you _must_ set `--cfg espidf_picolibc` in your `.cargo/config.toml` file, so that `libc` is built with the correct definitions:
+```
+[build]
+rustflags = "--cfg espidf_picolibc"
+```
 
 ## [0.37.2] - 2026-03-10
 
