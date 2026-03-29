@@ -60,12 +60,14 @@ jobs:
       - name: Build | Compile (Native)
         env:
           ESP_IDF_VERSION: ${{ matrix.idf-version }}
+          ESP_IDF_SDKCONFIG_DEFAULTS: "${{ github.workspace }}/.github/configs/sdkconfig.defaults"
           RUSTFLAGS: "--cfg espidf_time64"
         run: cargo build --target ${{ matrix.target }} -Zbuild-std=std,panic_abort
 
       - name: Build | Compile (Native), no_std
         env:
           ESP_IDF_VERSION: ${{ matrix.idf-version }}
+          ESP_IDF_SDKCONFIG_DEFAULTS: "${{ github.workspace }}/.github/configs/sdkconfig.defaults"
           RUSTFLAGS: "--cfg espidf_time64"
         run: cargo build --target ${{ matrix.target }} --no-default-features -Zbuild-std=std,panic_abort
 
@@ -79,11 +81,13 @@ jobs:
       - name: Clippy | Examples
         env:
           ESP_IDF_VERSION: ${{ matrix.idf-version }}
+          ESP_IDF_SDKCONFIG_DEFAULTS: "${{ github.workspace }}/.github/configs/sdkconfig.defaults"
           RUSTFLAGS: "--cfg espidf_time64"
         run: cargo clippy --examples --target ${{ matrix.target }} -Zbuild-std=std,panic_abort -- -Dwarnings -Adeprecated
 
       - name: Build | Examples
         env:
           ESP_IDF_VERSION: ${{ matrix.idf-version }}
+          ESP_IDF_SDKCONFIG_DEFAULTS: "${{ github.workspace }}/.github/configs/sdkconfig.defaults"
           RUSTFLAGS: "--cfg espidf_time64"
         run: cargo build --examples --target ${{ matrix.target }} -Zbuild-std=std,panic_abort
