@@ -1,4 +1,6 @@
-// Compile-time checks that ESP-IDF bindgen types and constants match libc definitions.
+//! Compile-time checks that ESP-IDF bindgen types and constants match libc definitions.
+//! If any of these checks fail, it is likely you need to update `libc` pinned version
+//! to the latest one.
 
 use crate as sys;
 use compile_fmt::{compile_assert, fmt};
@@ -8,7 +10,7 @@ macro_rules! check_constants {
         const _: () = {
             compile_assert!(
                 sys::$ident as i64 == libc::$ident as i64,
-                "Mismatch for `", stringify!($ident), "`: esp-idf=",
+                "libc/esp-idf-sys constant mismatch for `", stringify!($ident), "`: esp-idf=",
                 sys::$ident as i64 => fmt::<i64>(),
                 " libc=", libc::$ident as i64 => fmt::<i64>()
             );
@@ -21,7 +23,7 @@ macro_rules! check_constants_manually {
         const _: () = {
             compile_assert!(
                 $const1 as i64 == $const2 as i64,
-                "Mismatch for `", $name, "`: lhs=",
+                "libc/esp-idf-sys constant mismatch for `", $name, "`: lhs=",
                 $const1 as i64 => fmt::<i64>(),
                 " rhs=", $const2 as i64 => fmt::<i64>()
             );
@@ -34,13 +36,13 @@ macro_rules! check_types {
         const _: () = {
             compile_assert!(
                 std::mem::size_of::<sys::$ident>() == std::mem::size_of::<libc::$ident>(),
-                "Mismatch for type `", stringify!($ident), "` size: esp-idf=",
+                "libc/esp-idf-sys type mismatch for `", stringify!($ident), "` size: esp-idf=",
                 std::mem::size_of::<sys::$ident>() => fmt::<usize>(),
                 " libc=", std::mem::size_of::<libc::$ident>() => fmt::<usize>()
             );
             compile_assert!(
                 std::mem::align_of::<sys::$ident>() == std::mem::align_of::<libc::$ident>(),
-                "Mismatch for type `", stringify!($ident), "` alignment: esp-idf=",
+                "libc/esp-idf-sys type mismatch for `", stringify!($ident), "` alignment: esp-idf=",
                 std::mem::align_of::<sys::$ident>() => fmt::<usize>(),
                 " libc=", std::mem::align_of::<libc::$ident>() => fmt::<usize>()
             );
@@ -53,13 +55,13 @@ macro_rules! check_types_manually {
         const _: () = {
             compile_assert!(
                 $size1 == $size2,
-                "Mismatch for type `", $name, "` size: lhs=",
+                "libc/esp-idf-sys type mismatch for `", $name, "` size: lhs=",
                 $size1 => fmt::<usize>(),
                 " rhs=", $size2 => fmt::<usize>()
             );
             compile_assert!(
                 $align1 == $align2,
-                "Mismatch for type `", $name, "` alignment: lhs=",
+                "libc/esp-idf-sys type mismatch for `", $name, "` alignment: lhs=",
                 $align1 => fmt::<usize>(),
                 " rhs=", $align2 => fmt::<usize>()
             );
