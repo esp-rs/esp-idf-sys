@@ -17,4 +17,5 @@ const ESP_IDF_TIME64_CHECK: ::std::os::espidf::raw::time_t = 0 as crate::time_t;
 const ESP_IDF_TIME64_CHECK_LIBC: ::libc::time_t = 0 as crate::time_t;
 
 // Check for libc/esp-idf-sys type and constant mismatches.
+#[cfg(feature = "std")]
 mod libc;
