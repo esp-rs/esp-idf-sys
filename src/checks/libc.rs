@@ -79,6 +79,8 @@ macro_rules! check_types_manually {
 
 // newlib/espidf module (https://github.com/rust-lang/libc/blob/libc-0.2/src/unix/newlib/espidf/mod.rs)
 check_types!(clock_t);
+// wchar_t is 1 byte on xtensa (esp32/s2/s3) before IDF v5.4 vs 4 bytes in libc.
+#[cfg(any(not(any(esp32, esp32s2, esp32s3)), esp_idf_version_at_least_5_4_0))]
 check_types!(wchar_t);
 check_types!(cmsghdr);
 check_types!(msghdr);
@@ -174,6 +176,7 @@ check_types!(tm);
 check_types!(sigaction);
 #[cfg(not(esp_idf_libc_picolibc))]
 check_types!(stack_t);
+#[cfg(esp_idf_version_at_least_5_0_0)]
 check_types!(fd_set);
 //check_types!(passwd); // No binding
 #[cfg(not(esp_idf_version_at_least_6_0_0))]
