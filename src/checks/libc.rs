@@ -301,14 +301,8 @@ check_constants!(F_DUPFD_CLOEXEC);
 check_constants!(O_RDONLY);
 check_constants!(O_WRONLY);
 check_constants!(O_RDWR);
-// TODO: picolibc incompatibility, see https://github.com/esp-rs/esp-idf-sys/issues/410
-#[cfg(not(esp_idf_libc_picolibc))]
 check_constants!(O_APPEND);
-// TODO: picolibc incompatibility, see https://github.com/esp-rs/esp-idf-sys/issues/410
-#[cfg(not(esp_idf_libc_picolibc))]
 check_constants!(O_CREAT);
-// TODO: picolibc incompatibility, see https://github.com/esp-rs/esp-idf-sys/issues/410
-#[cfg(not(esp_idf_libc_picolibc))]
 check_constants!(O_TRUNC);
 check_constants!(O_EXCL);
 check_constants!(O_SYNC);
@@ -514,16 +508,14 @@ check_constants!(SIG_IGN);
 check_constants!(SIG_ERR);
 */
 check_constants!(DT_UNKNOWN);
-/* TODO: Fixed upstream https://github.com/rust-lang/libc/pull/5034, uncomment after libc release
 #[cfg(esp_idf_libc_picolibc)]
 check_constants!(DT_FIFO);
 #[cfg(esp_idf_libc_picolibc)]
 check_constants!(DT_CHR);
-check_constants!(DT_DIR); */
+check_constants!(DT_DIR);
 #[cfg(esp_idf_libc_picolibc)]
 check_constants!(DT_BLK);
-/* TODO: Fixed upstream https://github.com/rust-lang/libc/pull/5034, uncomment after libc release
-check_constants!(DT_REG); */
+check_constants!(DT_REG);
 #[cfg(esp_idf_libc_picolibc)]
 check_constants!(DT_LNK);
 #[cfg(esp_idf_libc_picolibc)]
