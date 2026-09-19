@@ -1,3 +1,13 @@
+# ⚠️ This repository has moved
+
+## `esp-idf-sys` is now developed in the [esp-rs/esp-idf](https://github.com/esp-rs/esp-idf) monorepo, together with `esp-idf-hal` and `esp-idf-svc`
+
+The sources live under [`esp-idf-sys/`](https://github.com/esp-rs/esp-idf/tree/master/esp-idf-sys) there, with the complete history of this repository and its releases tagged as `esp-idf-sys-vX.Y.Z`.
+
+**Please open issues and pull requests in [esp-rs/esp-idf](https://github.com/esp-rs/esp-idf).** This repository is kept read-only for reference; the content below describes the crate as of its last release from here.
+
+---
+
 # Raw Rust bindings for the [ESP IDF SDK](https://docs.espressif.com/projects/esp-idf/en/latest/esp32/)
 
 [![CI](https://github.com/esp-rs/esp-idf-sys/actions/workflows/ci.yml/badge.svg)](https://github.com/esp-rs/esp-idf-sys/actions/workflows/ci.yml)
